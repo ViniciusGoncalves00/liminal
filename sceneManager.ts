@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RayTracingRenderer } from './ray-tracing-renderer';
 
 export const SceneLayer = {
     Game: 0,
@@ -16,10 +17,11 @@ export class SceneManager {
     private readonly scene: THREE.Scene;
 
     private readonly editorRenderer: THREE.WebGLRenderer;
-    private readonly gameRenderer: THREE.WebGLRenderer;
+    // private readonly gameRenderer: THREE.WebGLRenderer;
+    private readonly gameRayTracingRenderer: RayTracingRenderer;
 
-    private readonly editorCamera: THREE.PerspectiveCamera;
-    private readonly gameCamera: THREE.PerspectiveCamera;
+    public readonly editorCamera: THREE.PerspectiveCamera;
+    public readonly gameCamera: THREE.PerspectiveCamera;
 
     private readonly editorControls: OrbitControls;
 
@@ -37,14 +39,26 @@ export class SceneManager {
             canvas: this.editorView
         });
 
-        this.gameRenderer = new THREE.WebGLRenderer({
-            canvas: this.gameView
+        // this.gameRenderer = new THREE.WebGLRenderer({
+        //     canvas: this.gameView
+        // });
+
+        const xRays = 7;
+        const yRays = 7;
+
+        this.gameRayTracingRenderer = new RayTracingRenderer({
+            canvas: this.gameView,
+            xRays: xRays,
+            yRays: yRays
         });
 
         this.resize();
 
         this.gameCamera = this.createGameCamera();
         this.editorCamera = this.createEditorCamera();
+
+        this.scene.add(this.gameCamera);
+        this.scene.add(this.editorCamera);
 
         //
         // Configure visible layers
@@ -60,6 +74,45 @@ export class SceneManager {
         this.editorCamera.layers.enable(SceneLayer.Editor);
         this.editorCamera.layers.enable(SceneLayer.GameOnly);
 
+        const points: THREE.Vector3[] = [];
+
+        for (let x = 0; x < xRays; x++) {
+            for (let y = 0; y < yRays; y++) {
+                const nx = (x + 0.5) / xRays * 2 - 1;
+                const ny = 1 - (y + 0.5) / yRays * 2;
+
+                const nearHeight =
+                    2 * Math.tan(THREE.MathUtils.degToRad(this.gameCamera.fov / 2)) * this.gameCamera.near;
+                            
+                const nearWidth = nearHeight * this.gameCamera.aspect;
+                            
+                const farHeight =
+                    2 * Math.tan(THREE.MathUtils.degToRad(this.gameCamera.fov / 2)) * this.gameCamera.far;
+                            
+                const farWidth = farHeight * this.gameCamera.aspect;
+
+                const nearPoint = new THREE.Vector3(
+                    nx * nearWidth * 0.5,
+                    ny * nearHeight * 0.5,
+                    -this.gameCamera.near
+                );
+            
+                const farPoint = new THREE.Vector3(
+                    nx * farWidth * 0.5,
+                    ny * farHeight * 0.5,
+                    -this.gameCamera.far
+                );
+
+                points.push(nearPoint);
+                points.push(farPoint);
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({color: 0xffff00});
+        const rays = new THREE.LineSegments(geometry, material);
+        this.gameCamera.add(rays);
+
         this.editorControls = new OrbitControls(
             this.editorCamera,
             this.editorRenderer.domElement
@@ -67,7 +120,7 @@ export class SceneManager {
 
         new OrbitControls(
             this.gameCamera,
-            this.gameRenderer.domElement
+            this.gameRayTracingRenderer.domElement
         );
 
         this.createHelpers();
@@ -79,7 +132,8 @@ export class SceneManager {
         this.editorControls.update();
 
         this.editorRenderer.render(this.scene, this.editorCamera);
-        this.gameRenderer.render(this.scene, this.gameCamera);
+        // this.gameRenderer.render(this.scene, this.gameCamera);
+        this.gameRayTracingRenderer.render(this.scene, this.gameCamera);
     }
 
     /**
@@ -102,6 +156,22 @@ export class SceneManager {
         this.scene.add(object);
     }
 
+    public addChildObject(
+        object: THREE.Object3D,
+        parent: THREE.Object3D,
+        ...layers: SceneLayer[]
+    ): void {
+
+        object.layers.disableAll();
+
+        if (layers.length === 0)
+            object.layers.enable(SceneLayer.Game);
+        else
+            layers.forEach(layer => object.layers.enable(layer));
+
+        parent.add(object);
+    }
+
     public removeObject(object: THREE.Object3D): void {
         this.scene.remove(object);
     }
@@ -121,7 +191,7 @@ export class SceneManager {
         const gameHeight = this.gameView.clientHeight;
 
         this.editorRenderer.setSize(editorWidth, editorHeight, false);
-        this.gameRenderer.setSize(gameWidth, gameHeight, false);
+        // this.gameRenderer.setSize(gameWidth, gameHeight, false);
 
         if (this.editorCamera) {
             this.editorCamera.aspect = editorWidth / editorHeight;
@@ -142,7 +212,7 @@ export class SceneManager {
             10000
         );
 
-        camera.position.set(0, 0, 3);
+        camera.position.set(-1, 1, -1);
         camera.lookAt(0, 0, 0);
 
         return camera;
@@ -171,5 +241,17 @@ export class SceneManager {
 
         const gameCameraHelper = new THREE.CameraHelper(this.gameCamera);
         this.addObject(gameCameraHelper, SceneLayer.Editor);
+
+        const light = new THREE.DirectionalLight();
+        light.position.set(5, 10, 7.5);
+        light.castShadow = true;
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
+        light.shadow.camera.near = 0.5;
+        light.shadow.camera.far = 500;
+        this.addObject(light, SceneLayer.Editor, SceneLayer.Game);
+
+        const lightHelper = new THREE.DirectionalLightHelper(light, 5);
+        this.addObject(lightHelper, SceneLayer.Editor);
     }
 }
