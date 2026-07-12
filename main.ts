@@ -8,11 +8,11 @@ const gameView = document.getElementById('game-view') as HTMLCanvasElement;
 
 const sceneManager = new SceneManager(editorView, gameView);
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshPhysicalMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
+// const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+// const material = new THREE.MeshPhysicalMaterial( { color: 0x00ff00 } );
+// const cube = new THREE.Mesh( geometry, material );
 
-sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
+// sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
 // const ray = ObjectFactory.ray([
 //     sceneManager.gameCamera.position.clone(),

@@ -43,8 +43,10 @@ export class SceneManager {
         //     canvas: this.gameView
         // });
 
-        const xRays = 7;
-        const yRays = 7;
+        const xRays = 192;
+        const yRays = 108;
+        // const xRays = 19;
+        // const yRays = 11;
 
         this.gameRayTracingRenderer = new RayTracingRenderer({
             canvas: this.gameView,
