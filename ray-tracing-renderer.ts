@@ -47,8 +47,39 @@ export class RayTracingRenderer {
         const direction = new THREE.Vector3();
         let u, v, r, g, b;
 
-        for (let x = 0; x < this.domElement.width; x += cellWidth) {
-            for (let y = 0; y < this.domElement.height; y += cellHeight) {
+        // for (let x = 0; x < this.domElement.width; x += cellWidth) {
+        //     for (let y = 0; y < this.domElement.height; y += cellHeight) {
+        //         u = ((x + 0.5) / this.domElement.width) * 2 - 1;
+        //         v = 1 - ((y + 0.5) / this.domElement.height) * 2;
+
+        //         direction.copy(forward);
+        //         direction.addScaledVector(right, u * halfWidth);
+        //         direction.addScaledVector(up, v * halfHeight);
+
+        //         this.ray.setDirection(direction);
+
+        //         const index = (y * this.domElement.width + x) * 4;
+
+        //         [r, g, b] = this.rayColor(this.ray);
+
+        //         this.pixels[index + 0] = r;
+        //         this.pixels[index + 1] = g;
+        //         this.pixels[index + 2] = b;
+        //         this.pixels[index + 3] = 255;
+
+        //         for (let i = 0; i < cellWidth; i++) {
+        //             for (let j = 0; j < cellHeight; j++) {
+        //                 this.pixels[index + 0 + i * 4 + j * this.domElement.width * 4] = r;
+        //                 this.pixels[index + 1 + i * 4 + j * this.domElement.width * 4] = g;
+        //                 this.pixels[index + 2 + i * 4 + j * this.domElement.width * 4] = b;
+        //                 this.pixels[index + 3 + i * 4 + j * this.domElement.width * 4] = 255;
+        //             }
+        //         }
+        //     }
+        // }
+
+        for (let x = 0; x < this.domElement.width; x++) {
+            for (let y = 0; y < this.domElement.height; y++) {
                 u = ((x + 0.5) / this.domElement.width) * 2 - 1;
                 v = 1 - ((y + 0.5) / this.domElement.height) * 2;
 
@@ -66,32 +97,23 @@ export class RayTracingRenderer {
                 this.pixels[index + 1] = g;
                 this.pixels[index + 2] = b;
                 this.pixels[index + 3] = 255;
-
-                // for (let i = 0; i < cellWidth; i++) {
-                //     for (let j = 0; j < cellHeight; j++) {
-                //         this.pixels[index + 0 + i * 4 + j * this.domElement.width * 4] = r;
-                //         this.pixels[index + 1 + i * 4 + j * this.domElement.width * 4] = g;
-                //         this.pixels[index + 2 + i * 4 + j * this.domElement.width * 4] = b;
-                //         this.pixels[index + 3 + i * 4 + j * this.domElement.width * 4] = 255;
-                //     }
-                // }
             }
         }
 
         this.canvasContext.putImageData(this.imageData, 0, 0);
     }
 
-    public hitSphere(rayOrigin: THREE.Vector3, rayDirection: THREE.Vector3, sphereCenter: THREE.Vector3, sphereRadius: number): number {
-        const distanceFromCenters = new THREE.Vector3().subVectors(sphereCenter, rayOrigin);
-        const a = rayDirection.dot(rayDirection);
-        const b = -2.0 * rayDirection.dot(distanceFromCenters);
-        const c = distanceFromCenters.dot(distanceFromCenters) - sphereRadius * sphereRadius;
-        const discriminant = b * b - 4 * a * c;
+    public hitSphere(ray: Ray, sphereCenter: THREE.Vector3, sphereRadius: number): number {
+        const originToCenter = new THREE.Vector3().subVectors(sphereCenter, ray.origin);
+        const a = ray.direction.lengthSq();
+        const h = ray.direction.dot(originToCenter);
+        const c = originToCenter.lengthSq() - sphereRadius * sphereRadius;
+        const discriminant = h * h - a * c;
 
         if (discriminant < 0) {
             return -1.0;
         } else {
-            return (-b - Math.sqrt(discriminant) ) / (2.0*a);
+            return (h - Math.sqrt(discriminant) ) / a;
         }
     }
 
@@ -100,7 +122,7 @@ export class RayTracingRenderer {
         
         const sphereCenter = new THREE.Vector3(0, 0, -1);
         const sphereRadius = 0.5;
-        const value = this.hitSphere(ray.origin, ray.direction, sphereCenter, sphereRadius);
+        const value = this.hitSphere(ray, sphereCenter, sphereRadius);
 
         if (value > 0) {
             const normal = new THREE.Vector3().subVectors(ray.at(value), sphereCenter).normalize();
