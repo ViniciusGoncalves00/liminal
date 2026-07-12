@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Ray } from "three";
 import type { Hittable } from "./hittable";
 import { HitData } from './hit-data';
+import type { Interval } from './interval';
 
 export class Sphere implements Hittable {
     public readonly center: THREE.Vector3;
@@ -12,7 +13,7 @@ export class Sphere implements Hittable {
         this.radius = radius;
     }
 
-    public hit(ray: Ray, tMin: number, tMax: number, hitData: HitData): boolean {
+    public hit(ray: Ray, interval: Interval, hitData: HitData): boolean {
         const originToCenter = new THREE.Vector3().subVectors(this.center, ray.origin);
         const a = ray.direction.lengthSq();
         const h = ray.direction.dot(originToCenter);
@@ -26,9 +27,9 @@ export class Sphere implements Hittable {
         const sqrtDiscriminant = Math.sqrt(discriminant);
         let root = (h - sqrtDiscriminant) / a;
         
-        if (root <= tMin || tMax <= root) {
+        if (!interval.surrounds(root)) {
             root = (h + sqrtDiscriminant) / a;
-            if (root <= tMin || tMax <= root)
+            if (!interval.surrounds(root))
                 return false;
         }
 

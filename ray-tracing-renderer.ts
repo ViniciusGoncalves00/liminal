@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HitabbleCollection } from './hittable-collection';
 import { HitData } from './hit-data';
 import { Sphere } from './sphere';
+import { Interval } from './interval';
 
 export interface RayTracingRendererParameters extends THREE.WebGLRendererParameters {
     canvas?: HTMLCanvasElement;
@@ -40,8 +41,8 @@ export class RayTracingRenderer {
         const lookDirection = camera.getWorldDirection(new THREE.Vector3());
         lookDirection.normalize();
 
-        const cellWidth = Math.floor(this.domElement.width / this.xRays);
-        const cellHeight = Math.floor(this.domElement.height / this.yRays);
+        // const cellWidth = Math.floor(this.domElement.width / this.xRays);
+        // const cellHeight = Math.floor(this.domElement.height / this.yRays);
 
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
@@ -130,7 +131,7 @@ export class RayTracingRenderer {
         let r, g, b;
         
         const hitData = new HitData();
-        if (hittableCollection.hit(ray, 0, Infinity, hitData)) {
+        if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
             r = 0.5 * (hitData.normal.x + 1) * 255;
             g = 0.5 * (hitData.normal.y + 1) * 255;
             b = 0.5 * (hitData.normal.z + 1) * 255;
