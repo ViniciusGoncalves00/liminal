@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { Ray } from './ray';
+import { HitabbleCollection } from './hittable-collection';
+import { HitData } from './hit-data';
+import { Sphere } from './sphere';
 
 export interface RayTracingRendererParameters extends THREE.WebGLRendererParameters {
     canvas?: HTMLCanvasElement;
@@ -11,7 +13,9 @@ export class RayTracingRenderer {
     public readonly domElement: HTMLCanvasElement;
     public readonly xRays: number;
     public readonly yRays: number;
-    public readonly ray: Ray = new Ray();
+    public readonly ray: THREE.Ray = new THREE.Ray();
+
+    public readonly hittableCollection: HitabbleCollection = new HitabbleCollection();
 
     private canvasContext: CanvasRenderingContext2D;
     private imageData: ImageData;
@@ -25,6 +29,11 @@ export class RayTracingRenderer {
         this.canvasContext = this.domElement.getContext("2d")!;
         this.imageData = this.canvasContext.createImageData(this.domElement.width, this.domElement.height);
         this.pixels = this.imageData.data;
+
+        this.hittableCollection.objets.push(
+            new Sphere(new THREE.Vector3(0, 0, -1), 1),
+            new Sphere(new THREE.Vector3(0, 3, -1), 1),
+        )
     }
 
     public render(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
@@ -42,7 +51,7 @@ export class RayTracingRenderer {
         const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
         const halfWidth = halfHeight * camera.aspect;
 
-        this.ray.setOrigin(camera.position);
+        this.ray.origin.copy(camera.position);
 
         const direction = new THREE.Vector3();
         let u, v, r, g, b;
@@ -87,11 +96,11 @@ export class RayTracingRenderer {
                 direction.addScaledVector(right, u * halfWidth);
                 direction.addScaledVector(up, v * halfHeight);
 
-                this.ray.setDirection(direction);
+                this.ray.direction.copy(direction);
 
                 const index = (y * this.domElement.width + x) * 4;
 
-                [r, g, b] = this.rayColor(this.ray);
+                [r, g, b] = this.rayColor(this.ray, this.hittableCollection);
 
                 this.pixels[index + 0] = r;
                 this.pixels[index + 1] = g;
@@ -103,32 +112,28 @@ export class RayTracingRenderer {
         this.canvasContext.putImageData(this.imageData, 0, 0);
     }
 
-    public hitSphere(ray: Ray, sphereCenter: THREE.Vector3, sphereRadius: number): number {
-        const originToCenter = new THREE.Vector3().subVectors(sphereCenter, ray.origin);
-        const a = ray.direction.lengthSq();
-        const h = ray.direction.dot(originToCenter);
-        const c = originToCenter.lengthSq() - sphereRadius * sphereRadius;
-        const discriminant = h * h - a * c;
+    // public hitSphere(ray: THREE.Ray, sphereCenter: THREE.Vector3, sphereRadius: number): number {
+    //     const originToCenter = new THREE.Vector3().subVectors(sphereCenter, ray.origin);
+    //     const a = ray.direction.lengthSq();
+    //     const h = ray.direction.dot(originToCenter);
+    //     const c = originToCenter.lengthSq() - sphereRadius * sphereRadius;
+    //     const discriminant = h * h - a * c;
 
-        if (discriminant < 0) {
-            return -1.0;
-        } else {
-            return (h - Math.sqrt(discriminant) ) / a;
-        }
-    }
+    //     if (discriminant < 0) {
+    //         return -1.0;
+    //     } else {
+    //         return (h - Math.sqrt(discriminant) ) / a;
+    //     }
+    // }
 
-    public rayColor(ray: Ray): [number, number, number] {
+    public rayColor(ray: THREE.Ray, hittableCollection: HitabbleCollection): [number, number, number] {
         let r, g, b;
         
-        const sphereCenter = new THREE.Vector3(0, 0, -1);
-        const sphereRadius = 0.5;
-        const value = this.hitSphere(ray, sphereCenter, sphereRadius);
-
-        if (value > 0) {
-            const normal = new THREE.Vector3().subVectors(ray.at(value), sphereCenter).normalize();
-            r = 0.5 * (normal.x + 1) * 255;
-            g = 0.5 * (normal.y + 1) * 255;
-            b = 0.5 * (normal.z + 1) * 255;
+        const hitData = new HitData();
+        if (hittableCollection.hit(ray, 0, Infinity, hitData)) {
+            r = 0.5 * (hitData.normal.x + 1) * 255;
+            g = 0.5 * (hitData.normal.y + 1) * 255;
+            b = 0.5 * (hitData.normal.z + 1) * 255;
         } else {
             r = (ray.direction.x * 0.5 + 0.5) * 255;
             g = (ray.direction.y * 0.5 + 0.5) * 255;
