@@ -15,12 +15,17 @@ export class RayTracingRenderer {
     public readonly xRays: number;
     public readonly yRays: number;
     public readonly ray: THREE.Ray = new THREE.Ray();
+    public readonly rayColor: THREE.Vector3 = new THREE.Vector3();
 
     public readonly hittableCollection: HitabbleCollection = new HitabbleCollection();
 
     private canvasContext: CanvasRenderingContext2D;
     private imageData: ImageData;
     private pixels: Uint8ClampedArray;
+    private colorInterval: Interval = new Interval(0, 255);
+
+    private samplesPerPixel: number = 10;
+    private pixelSamplesScale: number = 1 / this.samplesPerPixel;
 
     public constructor(parameters?: RayTracingRendererParameters | undefined) {
         this.domElement = (parameters?.canvas as HTMLCanvasElement) ?? document.createElement('canvas');
@@ -55,7 +60,7 @@ export class RayTracingRenderer {
         this.ray.origin.copy(camera.position);
 
         const direction = new THREE.Vector3();
-        let u, v, r, g, b;
+        let u, v;
 
         // for (let x = 0; x < this.domElement.width; x += cellWidth) {
         //     for (let y = 0; y < this.domElement.height; y += cellHeight) {
@@ -101,45 +106,82 @@ export class RayTracingRenderer {
 
                 const index = (y * this.domElement.width + x) * 4;
 
-                [r, g, b] = this.rayColor(this.ray, this.hittableCollection);
+                // color pixel_color(0,0,0);
+                // for (int sample = 0; sample < samples_per_pixel; sample++) {
+                //     ray r = get_ray(i, j);
+                //     pixel_color += ray_color(r, world);
+                // }
+                // write_color(std::cout, pixel_samples_scale * pixel_color);
 
-                this.pixels[index + 0] = r;
-                this.pixels[index + 1] = g;
-                this.pixels[index + 2] = b;
-                this.pixels[index + 3] = 255;
+                const color = new THREE.Vector3();
+
+                for (let sample = 0; sample < this.samplesPerPixel; sample++) {
+                    this.randomizeRay(x, y);
+                    this.setRayColor(this.ray, this.hittableCollection)
+                    color.add(this.rayColor);
+                }
+
+                this.writeColor(this.pixels, index, color.multiplyScalar(this.pixelSamplesScale))
             }
         }
 
         this.canvasContext.putImageData(this.imageData, 0, 0);
     }
 
-    // public hitSphere(ray: THREE.Ray, sphereCenter: THREE.Vector3, sphereRadius: number): number {
-    //     const originToCenter = new THREE.Vector3().subVectors(sphereCenter, ray.origin);
-    //     const a = ray.direction.lengthSq();
-    //     const h = ray.direction.dot(originToCenter);
-    //     const c = originToCenter.lengthSq() - sphereRadius * sphereRadius;
-    //     const discriminant = h * h - a * c;
-
-    //     if (discriminant < 0) {
-    //         return -1.0;
-    //     } else {
-    //         return (h - Math.sqrt(discriminant) ) / a;
-    //     }
-    // }
-
-    public rayColor(ray: THREE.Ray, hittableCollection: HitabbleCollection): [number, number, number] {
-        let r, g, b;
-        
+    public setRayColor(ray: THREE.Ray, hittableCollection: HitabbleCollection): void{
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
-            r = 0.5 * (hitData.normal.x + 1) * 255;
-            g = 0.5 * (hitData.normal.y + 1) * 255;
-            b = 0.5 * (hitData.normal.z + 1) * 255;
-        } else {
-            r = (ray.direction.x * 0.5 + 0.5) * 255;
-            g = (ray.direction.y * 0.5 + 0.5) * 255;
-            b = (ray.direction.z * 0.5 + 0.5) * 255;
+            this.rayColor.set(
+                0.5 * (hitData.normal.x + 1) * 255,
+                0.5 * (hitData.normal.y + 1) * 255,
+                0.5 * (hitData.normal.z + 1) * 255,
+            )
         }
-        return [r, g, b];
+
+        this.rayColor.set(
+            (ray.direction.x * 0.5 + 0.5) * 255,
+            (ray.direction.y * 0.5 + 0.5) * 255,
+            (ray.direction.z * 0.5 + 0.5) * 255,
+        )
+    }
+
+    public randomizeRay(x: number, y: number): void {
+        const offset = this.sampleSquare();
+
+        offset.x + x;
+        offset.y + y;
+
+        this.ray.direction.sub(offset);
+    }
+
+    
+    // ray get_ray(int i, int j) const {
+    //     // Construct a camera ray originating from the origin and directed at randomly sampled
+    //     // point around the pixel location i, j.
+
+    //     auto offset = sample_square();
+    //     auto pixel_sample = pixel00_loc
+    //                       + ((i + offset.x()) * pixel_delta_u)
+    //                       + ((j + offset.y()) * pixel_delta_v);
+
+    //     auto ray_origin = center;
+    //     auto ray_direction = pixel_sample - ray_origin;
+
+    //     return ray(ray_origin, ray_direction);
+    // }
+
+    public sampleSquare(): THREE.Vector3 {
+        return new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, 0);
+    }
+
+    public randomInInterval(min: number, max: number): number {
+        return  min + (max - min) * Math.random();
+    }
+
+    public writeColor(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3): void {
+        pixels[index + 0] = this.colorInterval.clamp(color.x);
+        pixels[index + 1] = this.colorInterval.clamp(color.y);
+        pixels[index + 2] = this.colorInterval.clamp(color.z);
+        pixels[index + 3] = 255;
     }
 }
