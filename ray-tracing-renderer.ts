@@ -22,10 +22,12 @@ export class RayTracingRenderer {
     private canvasContext: CanvasRenderingContext2D;
     private imageData: ImageData;
     private pixels: Uint8ClampedArray;
+    private lastFramepixels: Uint8ClampedArray;
     private colorInterval: Interval = new Interval(0, 255);
 
     private samplesPerPixel: number = 10;
     private pixelSamplesScale: number = 1 / this.samplesPerPixel;
+    private sampleRadius: number = 3;
 
     public constructor(parameters?: RayTracingRendererParameters | undefined) {
         this.domElement = (parameters?.canvas as HTMLCanvasElement) ?? document.createElement('canvas');
@@ -35,6 +37,7 @@ export class RayTracingRenderer {
         this.canvasContext = this.domElement.getContext("2d")!;
         this.imageData = this.canvasContext.createImageData(this.domElement.width, this.domElement.height);
         this.pixels = this.imageData.data;
+        this.lastFramepixels = this.imageData.data;
 
         this.hittableCollection.objets.push(
             new Sphere(new THREE.Vector3(0, 0, -1), 1),
@@ -106,36 +109,51 @@ export class RayTracingRenderer {
 
                 const index = (y * this.domElement.width + x) * 4;
 
-                // color pixel_color(0,0,0);
-                // for (int sample = 0; sample < samples_per_pixel; sample++) {
-                //     ray r = get_ray(i, j);
-                //     pixel_color += ray_color(r, world);
-                // }
-                // write_color(std::cout, pixel_samples_scale * pixel_color);
-
                 const color = new THREE.Vector3();
+                this.setRayColor(this.ray, this.hittableCollection);
+                color.add(this.rayColor);
 
-                for (let sample = 0; sample < this.samplesPerPixel; sample++) {
-                    this.randomizeRay(x, y);
-                    this.setRayColor(this.ray, this.hittableCollection)
-                    color.add(this.rayColor);
+                // for (let sample = 0; sample < this.samplesPerPixel; sample++) {
+                //     this.randomizeRayDirection(x, y);
+                //     this.setRayColor(this.ray, this.hittableCollection);
+                //     color.add(this.rayColor);
+                // }
+
+                for (let i = -this.sampleRadius; i < this.sampleRadius; i++) {
+                    for (let j = -this.sampleRadius; j < this.sampleRadius; j++) {
+                        const samePixel = i === 0 && j === 0;
+                        if (samePixel) continue;
+
+                        const outsideX = x + i < 0 || x + i > this.domElement.width;
+                        if (outsideX) continue;
+
+                        const outsideY = y + j < 0 || y + j > this.domElement.height;
+                        if (outsideY) continue;
+
+                        const previousColor = this.restoreColor(this.lastFramepixels, index);
+                        previousColor.multiplyScalar(0.015);
+                        color.add(previousColor);
+                    }
                 }
 
-                this.writeColor(this.pixels, index, color.multiplyScalar(this.pixelSamplesScale))
+                // this.writeColor(this.pixels, index, color.multiplyScalar(this.pixelSamplesScale));
+                this.writeColor(this.pixels, index, color)
             }
         }
 
         this.canvasContext.putImageData(this.imageData, 0, 0);
+        this.lastFramepixels.set(this.pixels);
     }
 
     public setRayColor(ray: THREE.Ray, hittableCollection: HitabbleCollection): void{
         const hitData = new HitData();
-        if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
+        if (hittableCollection.hit(this.ray, new Interval(0, Infinity), hitData)) {
             this.rayColor.set(
                 0.5 * (hitData.normal.x + 1) * 255,
                 0.5 * (hitData.normal.y + 1) * 255,
                 0.5 * (hitData.normal.z + 1) * 255,
             )
+            return;
         }
 
         this.rayColor.set(
@@ -145,30 +163,14 @@ export class RayTracingRenderer {
         )
     }
 
-    public randomizeRay(x: number, y: number): void {
+    public randomizeRayDirection(x: number, y: number): void {
         const offset = this.sampleSquare();
 
-        offset.x + x;
-        offset.y + y;
+        offset.x += x;
+        offset.y += y;
 
         this.ray.direction.sub(offset);
     }
-
-    
-    // ray get_ray(int i, int j) const {
-    //     // Construct a camera ray originating from the origin and directed at randomly sampled
-    //     // point around the pixel location i, j.
-
-    //     auto offset = sample_square();
-    //     auto pixel_sample = pixel00_loc
-    //                       + ((i + offset.x()) * pixel_delta_u)
-    //                       + ((j + offset.y()) * pixel_delta_v);
-
-    //     auto ray_origin = center;
-    //     auto ray_direction = pixel_sample - ray_origin;
-
-    //     return ray(ray_origin, ray_direction);
-    // }
 
     public sampleSquare(): THREE.Vector3 {
         return new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, 0);
@@ -183,5 +185,9 @@ export class RayTracingRenderer {
         pixels[index + 1] = this.colorInterval.clamp(color.y);
         pixels[index + 2] = this.colorInterval.clamp(color.z);
         pixels[index + 3] = 255;
+    }
+
+    public restoreColor(pixels: Uint8ClampedArray, index: number): THREE.Vector3 {
+        return new THREE.Vector3(pixels[index + 0], pixels[index + 1], pixels[index + 2]);
     }
 }
