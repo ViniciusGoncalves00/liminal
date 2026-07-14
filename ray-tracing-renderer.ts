@@ -18,6 +18,11 @@ export class RayTracingRenderer {
     public readonly rayColor: THREE.Vector3 = new THREE.Vector3();
     public readonly antiAliasingActive: boolean = true;
 
+    private readonly temp1 = new THREE.Vector3();
+    private readonly temp2 = new THREE.Vector3();
+    private readonly temp3 = new THREE.Vector3();
+    private readonly tempRay = new THREE.Ray();
+
     public readonly hittableCollection: HitabbleCollection = new HitabbleCollection();
 
     private canvasContext: CanvasRenderingContext2D;
@@ -26,7 +31,7 @@ export class RayTracingRenderer {
     private lastFramepixels: Uint8ClampedArray;
     private colorInterval: Interval = new Interval(0, 255);
 
-    private samplesPerPixel: number = 10;
+    private samplesPerPixel: number = 5;
     private pixelSamplesScale: number = 1 / this.samplesPerPixel;
     private sampleRadius: number = 3;
 
@@ -42,7 +47,7 @@ export class RayTracingRenderer {
 
         this.hittableCollection.objets.push(
             new Sphere(new THREE.Vector3(0, 0, -1), 1),
-            new Sphere(new THREE.Vector3(0, 2, -1), 1),
+            new Sphere(new THREE.Vector3(0, 2.05, -1), 1),
         )
     }
 
@@ -102,7 +107,7 @@ export class RayTracingRenderer {
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
             const direction = this.randomOnHemisphere(hitData.normal);
-            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.9);
+            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.75);
         }
 
         const unitDirection = ray.direction.clone().normalize();
@@ -158,8 +163,29 @@ export class RayTracingRenderer {
         return new THREE.Vector3(pixels[index + 0], pixels[index + 1], pixels[index + 2]);
     }
 
+//     inline vec3 random_unit_vector() {
+//     while (true) {
+//         auto p = vec3::random(-1,1);
+//         auto lensq = p.length_squared();
+//         if (lensq <= 1)
+//             return p / sqrt(lensq);
+//     }
+// }
+
+    public randomUnitVector(): THREE.Vector3 {
+        while (true) {
+            const vector = this.randomVectorInInterval(-1, 1);
+            const lengthSquared = vector.lengthSq(); 
+            if (lengthSquared) return vector.divideScalar(Math.sqrt(lengthSquared));
+        }
+    }
+
     public randomVector(): THREE.Vector3 {
-        return new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
+        return new THREE.Vector3(Math.random(), Math.random(), Math.random());
+    }
+
+    public randomVectorInInterval(min: number, max: number): THREE.Vector3 {
+        return new THREE.Vector3(this.randomInInterval(min, max), this.randomInInterval(min, max), this.randomInInterval(min, max));
     }
 
     public antiAliasing(camera: THREE.PerspectiveCamera, x: number, y: number, color: THREE.Vector3) {
@@ -192,8 +218,6 @@ export class RayTracingRenderer {
     }
 
     public randomOnHemisphere(normal: THREE.Vector3): THREE.Vector3 {
-        const random = this.randomVector();
-        const dot = normal.dot(random);
-        return dot < 0 ? random : random.multiplyScalar(-1);
+        return normal.clone().add(this.randomUnitVector()).normalize();
     }
 }
