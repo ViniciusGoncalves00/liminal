@@ -16,6 +16,7 @@ export class RayTracingRenderer {
     public readonly yRays: number;
     public readonly ray: THREE.Ray = new THREE.Ray();
     public readonly rayColor: THREE.Vector3 = new THREE.Vector3();
+    public readonly antiAliasingActive: boolean = true;
 
     public readonly hittableCollection: HitabbleCollection = new HitabbleCollection();
 
@@ -41,7 +42,7 @@ export class RayTracingRenderer {
 
         this.hittableCollection.objets.push(
             new Sphere(new THREE.Vector3(0, 0, -1), 1),
-            new Sphere(new THREE.Vector3(0, 3, -1), 1),
+            new Sphere(new THREE.Vector3(0, 2, -1), 1),
         )
     }
 
@@ -65,37 +66,6 @@ export class RayTracingRenderer {
         const direction = new THREE.Vector3();
         let u, v;
 
-        // for (let x = 0; x < this.domElement.width; x += cellWidth) {
-        //     for (let y = 0; y < this.domElement.height; y += cellHeight) {
-        //         u = ((x + 0.5) / this.domElement.width) * 2 - 1;
-        //         v = 1 - ((y + 0.5) / this.domElement.height) * 2;
-
-        //         direction.copy(forward);
-        //         direction.addScaledVector(right, u * halfWidth);
-        //         direction.addScaledVector(up, v * halfHeight);
-
-        //         this.ray.setDirection(direction);
-
-        //         const index = (y * this.domElement.width + x) * 4;
-
-        //         [r, g, b] = this.rayColor(this.ray);
-
-        //         this.pixels[index + 0] = r;
-        //         this.pixels[index + 1] = g;
-        //         this.pixels[index + 2] = b;
-        //         this.pixels[index + 3] = 255;
-
-        //         for (let i = 0; i < cellWidth; i++) {
-        //             for (let j = 0; j < cellHeight; j++) {
-        //                 this.pixels[index + 0 + i * 4 + j * this.domElement.width * 4] = r;
-        //                 this.pixels[index + 1 + i * 4 + j * this.domElement.width * 4] = g;
-        //                 this.pixels[index + 2 + i * 4 + j * this.domElement.width * 4] = b;
-        //                 this.pixels[index + 3 + i * 4 + j * this.domElement.width * 4] = 255;
-        //             }
-        //         }
-        //     }
-        // }
-
         for (let x = 0; x < this.domElement.width; x++) {
             for (let y = 0; y < this.domElement.height; y++) {
                 u = ((x + 0.5) / this.domElement.width) * 2 - 1;
@@ -112,39 +82,52 @@ export class RayTracingRenderer {
 
                 const color = new THREE.Vector3();
 
-                for (let sample = 0; sample < this.samplesPerPixel; sample++) {
-                    const jitter = this.sampleSquare();
-                                
-                    const u =
-                        ((x + 0.5 + jitter.x) / this.domElement.width) * 2 - 1;
-                                
-                    const v =
-                        1 - ((y + 0.5 + jitter.y) / this.domElement.height) * 2;
-                                
-                    direction.copy(forward);
-                    direction.addScaledVector(right, u * halfWidth);
-                    direction.addScaledVector(up, v * halfHeight);
-                    direction.normalize();
-                                
-                    this.ray.direction.copy(direction);
-                    this.updateRayColor(this.ray, this.hittableCollection);       
-                    color.add(this.rayColor);
+                if (this.antiAliasingActive) {
+                    this.antiAliasing(camera, x, y, color);
+                    color.multiplyScalar(this.pixelSamplesScale);
+                } else {
+                    color.add(this.getRayColor(this.ray, 10, this.hittableCollection));
                 }
 
-                this.writeColor(this.pixels, index, color.multiplyScalar(this.pixelSamplesScale));
+                this.writeColor(this.pixels, index, color);
             }
         }
 
         this.canvasContext.putImageData(this.imageData, 0, 0);
     }
 
-    public updateRayColor(ray: THREE.Ray, hittableCollection: HitabbleCollection): void {
+    public getRayColor(ray: THREE.Ray, depth: number, hittableCollection: HitabbleCollection): THREE.Vector3 {
+        if (depth <= 0) return new THREE.Vector3();
+
+        const hitData = new HitData();
+        if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
+            const direction = this.randomOnHemisphere(hitData.normal);
+            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.9);
+        }
+
+        const unitDirection = ray.direction.clone().normalize();
+
+        const a = 0.5 * (unitDirection.y + 1.0);
+
+        const white = new THREE.Vector3(1.0, 1.0, 1.0);
+        const blue = new THREE.Vector3(0.5, 0.7, 1.0);
+
+        return white.lerp(blue, a).multiplyScalar(255);
+    }
+
+    public updateRayColor(ray: THREE.Ray, depth: number, hittableCollection: HitabbleCollection): void {
+        if (depth <= 0) {
+            this.rayColor.set(0, 0, 0);
+            return;
+        }
+
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
+            const direction = this.randomOnHemisphere(hitData.normal);
             this.rayColor.set(
-                0.5 * (hitData.normal.x + 1) * 255,
-                0.5 * (hitData.normal.y + 1) * 255,
-                0.5 * (hitData.normal.z + 1) * 255,
+                0.5 * (direction.x + 1) * 255,
+                0.5 * (direction.y + 1) * 255,
+                0.5 * (direction.z + 1) * 255,
             )
             return;
         }
@@ -173,5 +156,44 @@ export class RayTracingRenderer {
 
     public restoreColor(pixels: Uint8ClampedArray, index: number): THREE.Vector3 {
         return new THREE.Vector3(pixels[index + 0], pixels[index + 1], pixels[index + 2]);
+    }
+
+    public randomVector(): THREE.Vector3 {
+        return new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
+    }
+
+    public antiAliasing(camera: THREE.PerspectiveCamera, x: number, y: number, color: THREE.Vector3) {
+        const direction = new THREE.Vector3();
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+        const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+
+        const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        const halfWidth = halfHeight * camera.aspect;
+
+        for (let sample = 0; sample < this.samplesPerPixel; sample++) {
+            const jitter = this.sampleSquare();
+                        
+            const u =
+                ((x + 0.5 + jitter.x) / this.domElement.width) * 2 - 1;
+                        
+            const v =
+                1 - ((y + 0.5 + jitter.y) / this.domElement.height) * 2;
+                        
+            direction.copy(forward);
+            direction.addScaledVector(right, u * halfWidth);
+            direction.addScaledVector(up, v * halfHeight);
+            direction.normalize();
+                        
+            this.ray.direction.copy(direction);
+            color.add(this.getRayColor(this.ray, 10, this.hittableCollection));
+        }
+    }
+
+    public randomOnHemisphere(normal: THREE.Vector3): THREE.Vector3 {
+        const random = this.randomVector();
+        const dot = normal.dot(random);
+        return dot < 0 ? random : random.multiplyScalar(-1);
     }
 }
