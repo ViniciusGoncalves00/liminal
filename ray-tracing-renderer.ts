@@ -3,6 +3,7 @@ import { HitabbleCollection } from './hittable-collection';
 import { HitData } from './hit-data';
 import { Sphere } from './sphere';
 import { Interval } from './interval';
+import { VectorUtils } from './vector-utils';
 
 export interface RayTracingRendererParameters extends THREE.WebGLRendererParameters {
     canvas?: HTMLCanvasElement;
@@ -94,7 +95,7 @@ export class RayTracingRenderer {
                     color.add(this.getRayColor(this.ray, 10, this.hittableCollection));
                 }
 
-                this.writeColor(this.pixels, index, color);
+                this.writeColorIntoPixelArray(this.pixels, index, color);
             }
         }
 
@@ -106,7 +107,7 @@ export class RayTracingRenderer {
 
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
-            const direction = this.randomOnHemisphere(hitData.normal);
+            const direction = VectorUtils.randomOnHemisphere(hitData.normal);
             return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.75);
         }
 
@@ -128,7 +129,7 @@ export class RayTracingRenderer {
 
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
-            const direction = this.randomOnHemisphere(hitData.normal);
+            const direction = VectorUtils.randomOnHemisphere(hitData.normal);
             this.rayColor.set(
                 0.5 * (direction.x + 1) * 255,
                 0.5 * (direction.y + 1) * 255,
@@ -147,45 +148,16 @@ export class RayTracingRenderer {
     public sampleSquare(): THREE.Vector3 {
         return new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, 0);
     }
-
-    public randomInInterval(min: number, max: number): number {
-        return  min + (max - min) * Math.random();
-    }
-
-    public writeColor(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3): void {
+    
+    public writeColorIntoPixelArray(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3, alphaValue: number = 255): void {
         pixels[index + 0] = this.colorInterval.clamp(color.x);
         pixels[index + 1] = this.colorInterval.clamp(color.y);
         pixels[index + 2] = this.colorInterval.clamp(color.z);
-        pixels[index + 3] = 255;
+        pixels[index + 3] = alphaValue;
     }
 
-    public restoreColor(pixels: Uint8ClampedArray, index: number): THREE.Vector3 {
+    public pixelArrayToColor(pixels: Uint8ClampedArray, index: number): THREE.Vector3 {
         return new THREE.Vector3(pixels[index + 0], pixels[index + 1], pixels[index + 2]);
-    }
-
-//     inline vec3 random_unit_vector() {
-//     while (true) {
-//         auto p = vec3::random(-1,1);
-//         auto lensq = p.length_squared();
-//         if (lensq <= 1)
-//             return p / sqrt(lensq);
-//     }
-// }
-
-    public randomUnitVector(): THREE.Vector3 {
-        while (true) {
-            const vector = this.randomVectorInInterval(-1, 1);
-            const lengthSquared = vector.lengthSq(); 
-            if (lengthSquared) return vector.divideScalar(Math.sqrt(lengthSquared));
-        }
-    }
-
-    public randomVector(): THREE.Vector3 {
-        return new THREE.Vector3(Math.random(), Math.random(), Math.random());
-    }
-
-    public randomVectorInInterval(min: number, max: number): THREE.Vector3 {
-        return new THREE.Vector3(this.randomInInterval(min, max), this.randomInInterval(min, max), this.randomInInterval(min, max));
     }
 
     public antiAliasing(camera: THREE.PerspectiveCamera, x: number, y: number, color: THREE.Vector3) {
@@ -215,9 +187,5 @@ export class RayTracingRenderer {
             this.ray.direction.copy(direction);
             color.add(this.getRayColor(this.ray, 10, this.hittableCollection));
         }
-    }
-
-    public randomOnHemisphere(normal: THREE.Vector3): THREE.Vector3 {
-        return normal.clone().add(this.randomUnitVector()).normalize();
     }
 }
