@@ -117,7 +117,7 @@ export class RayTracingRenderer {
 
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
-            const direction = VectorUtils.randomOnHemisphere(hitData.normal);
+            const direction = hitData.normal.clone().add(VectorUtils.randomUnitVector());
             return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.75);
         }
 
