@@ -4,6 +4,7 @@ import { HitData } from './hit-data';
 import { Sphere } from './sphere';
 import { Interval } from './interval';
 import { VectorUtils } from './vector-utils';
+import { Utils } from './utils';
 
 export interface RayTracingRendererParameters extends THREE.WebGLRendererParameters {
     canvas?: HTMLCanvasElement;
@@ -43,7 +44,7 @@ export class RayTracingRenderer {
     private canvasContext: CanvasRenderingContext2D;
     private imageData: ImageData;
     private pixels: Uint8ClampedArray;
-    private colorInterval: Interval = new Interval(0, 255);
+    private colorInterval: Interval = new Interval(0, 1);
 
     private samplesPerPixel: number = 5;
     private pixelSamplesScale: number = 1 / this.samplesPerPixel;
@@ -118,7 +119,7 @@ export class RayTracingRenderer {
         const hitData = new HitData();
         if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
             const direction = hitData.normal.clone().add(VectorUtils.randomUnitVector());
-            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.75);
+            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.5);
         }
 
         const unitDirection = ray.direction.clone().normalize();
@@ -128,38 +129,18 @@ export class RayTracingRenderer {
         const white = new THREE.Vector3(1.0, 1.0, 1.0);
         const blue = new THREE.Vector3(0.5, 0.7, 1.0);
 
-        return white.lerp(blue, a).multiplyScalar(255);
+        return white.lerp(blue, a);
     }
-
-    // public updateRayColor(ray: THREE.Ray, depth: number, hittableCollection: HitabbleCollection): void {
-    //     if (depth <= 0) {
-    //         this.storedRayColor.set(0, 0, 0);
-    //         return;
-    //     }
-
-    //     const hitData = new HitData();
-    //     if (hittableCollection.hit(ray, new Interval(0, Infinity), hitData)) {
-    //         const direction = VectorUtils.randomOnHemisphere(hitData.normal);
-    //         this.storedRayColor.set(
-    //             0.5 * (direction.x + 1) * 255,
-    //             0.5 * (direction.y + 1) * 255,
-    //             0.5 * (direction.z + 1) * 255,
-    //         )
-    //         return;
-    //     }
-
-    //     this.storedRayColor.set(
-    //         (ray.direction.x * 0.5 + 0.5) * 255,
-    //         (ray.direction.y * 0.5 + 0.5) * 255,
-    //         (ray.direction.z * 0.5 + 0.5) * 255,
-    //     )
-    // }
     
-    public writeColorIntoPixelArray(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3, alphaValue: number = 255): void {
-        pixels[index + 0] = this.colorInterval.clamp(color.x);
-        pixels[index + 1] = this.colorInterval.clamp(color.y);
-        pixels[index + 2] = this.colorInterval.clamp(color.z);
-        pixels[index + 3] = alphaValue;
+    public writeColorIntoPixelArray(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3, alphaValue: number = 1): void {
+        const r = Utils.linearSpaceToGammaSpace(color.x);
+        const g = Utils.linearSpaceToGammaSpace(color.y);
+        const b = Utils.linearSpaceToGammaSpace(color.z);
+
+        pixels[index + 0] = this.colorInterval.clamp(r) * 256;
+        pixels[index + 1] = this.colorInterval.clamp(g) * 256;
+        pixels[index + 2] = this.colorInterval.clamp(b) * 256;
+        pixels[index + 3] = alphaValue * 256;
     }
 
     public pixelArrayToColor(pixels: Uint8ClampedArray, index: number): THREE.Vector3 {
