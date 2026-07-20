@@ -1,6 +1,6 @@
 export class Interval {
-    public readonly min: number;
-    public readonly max: number;
+    public min: number;
+    public max: number;
 
     public constructor(min: number = -Infinity, max: number = Infinity) {
         this.min = min;

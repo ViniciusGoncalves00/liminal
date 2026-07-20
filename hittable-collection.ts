@@ -1,7 +1,7 @@
 import type { Ray } from "three";
 import { HitData } from "./hit-data";
 import type { Hittable } from "./hittable";
-import type { Interval } from "./interval";
+import { Interval } from "./interval";
 
 export class HitabbleCollection implements Hittable {
     public readonly objets: Hittable[] = [];
@@ -11,30 +11,21 @@ export class HitabbleCollection implements Hittable {
         let hitSomething = false;
         let closestSoFar = interval.max;
 
-        this.objets.forEach(hittable => {
-            if (!hittable.hit(ray, interval, tempHitData)) return;
+        const rayInterval = new Interval(interval.min, interval.max);
 
+        for (let index = 0; index < this.objets.length; index++) {
+            const hittable = this.objets[index];
+            if (!hittable.hit(ray, rayInterval, tempHitData)) continue;
+            
             hitSomething = true;
             closestSoFar = tempHitData.t;
+            rayInterval.max = closestSoFar;
+
             hitData.setPoint(tempHitData.point);
             hitData.setT(tempHitData.t);
             hitData.setFaceNormal(ray, tempHitData.normal);
-        })
+        }
 
         return hitSomething;
     }
-
-        //     hit_record temp_rec;
-        // bool hit_anything = false;
-        // auto closest_so_far = ray_tmax;
-
-        // for (const auto& object : objects) {
-        //     if (object->hit(r, ray_tmin, closest_so_far, temp_rec)) {
-        //         hit_anything = true;
-        //         closest_so_far = temp_rec.t;
-        //         rec = temp_rec;
-        //     }
-        // }
-
-        // return hit_anything;
 }
