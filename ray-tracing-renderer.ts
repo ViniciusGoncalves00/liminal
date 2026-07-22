@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HitabbleCollection } from './hittable-collection';
+import { TrianglesCollection } from './triangle-collection';
 import { HitData } from './hit-data';
 import { Sphere } from './sphere';
 import { Interval } from './interval';
@@ -39,7 +39,7 @@ export class RayTracingRenderer {
     private renderLoopX: number = 0;
     private renderLoopY: number = 0;
 
-    public readonly hittableCollection: HitabbleCollection = new HitabbleCollection();
+    public readonly hittableCollection: TrianglesCollection = new TrianglesCollection();
 
     private canvasContext: CanvasRenderingContext2D;
     private imageData: ImageData;
@@ -57,11 +57,6 @@ export class RayTracingRenderer {
         this.canvasContext = this.domElement.getContext("2d")!;
         this.imageData = this.canvasContext.createImageData(this.domElement.width, this.domElement.height);
         this.pixels = this.imageData.data;
-
-        this.hittableCollection.objets.push(
-            new Sphere(new THREE.Vector3(0, 0, -1), 1),
-            new Sphere(new THREE.Vector3(0, 2.05, -1), 1),
-        )
     }
 
     public render(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
@@ -113,7 +108,7 @@ export class RayTracingRenderer {
         this.cameraHalfWidth = this.cameraHalfHeight * camera.aspect;
     }
 
-    public getRayColor(ray: THREE.Ray, depth: number, hittableCollection: HitabbleCollection): THREE.Vector3 {
+    public getRayColor(ray: THREE.Ray, depth: number, hittableCollection: TrianglesCollection): THREE.Vector3 {
         if (depth <= 0) return new THREE.Vector3();
 
         const hitData = new HitData();

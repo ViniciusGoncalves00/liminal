@@ -156,6 +156,7 @@ export class SceneManager {
         }
 
         this.scene.add(object);
+        this.gameRayTracingRenderer.hittableCollection.addObject(this.scene);
     }
 
     public addChildObject(
