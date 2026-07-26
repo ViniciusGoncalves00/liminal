@@ -18,9 +18,9 @@ export class RayTracingRenderer {
     public readonly yRays: number;
     public readonly storedRay: THREE.Ray = new THREE.Ray();
     public readonly storedRayColor: THREE.Vector3 = new THREE.Vector3();
+    public readonly rayBounces: number = 5;
 
-    public readonly antiAliasingActive: boolean = false;
-    public readonly depth: number = 10;
+    public readonly antiAliasingActive: boolean = true;
     private readonly jitter = new THREE.Vector3();
 
     private readonly cameraPosition = new THREE.Vector3();
@@ -39,6 +39,15 @@ export class RayTracingRenderer {
 
     private viewportY: number = 0;
     private viewportX: number = 0;
+
+    private readonly tempRay = new THREE.Ray();
+    private readonly tempDirection = new THREE.Vector3();
+    private readonly tempColor = new THREE.Vector3();
+    private readonly attenuation = new THREE.Vector3();
+    private readonly hitData = new HitData();
+    private readonly skyYellow = new THREE.Vector3(1.0, 0.75, 0.5);
+    private readonly skyBlue = new THREE.Vector3(0.5, 0.75, 1.0);
+    private readonly interval = new Interval(0.001, Infinity);
     // #endregion
 
     public readonly hittableCollection: TrianglesCollection = new TrianglesCollection();
@@ -81,7 +90,7 @@ export class RayTracingRenderer {
                 if (this.antiAliasingActive) {
                     this.applyAntiAliasing();
                 } else {
-                    this.storedRayColor.add(this.getRayColor(this.storedRay, this.depth, this.hittableCollection));
+                    this.storedRayColor.add(this.getRayColor(this.storedRay, this.rayBounces, this.hittableCollection));
                 }
 
                 this.writeColorIntoPixelArray(this.pixels, index, this.storedRayColor);
@@ -106,24 +115,37 @@ export class RayTracingRenderer {
         this.viewportY = 1 - ((this.screenY + 0.5 + jitterY) / this.domElement.height) * 2;
     }
 
-    public getRayColor(ray: THREE.Ray, depth: number, hittableCollection: TrianglesCollection): THREE.Vector3 {
-        if (depth <= 0) return new THREE.Vector3();
+    public getRayColor(ray: THREE.Ray, bounces: number, world: TrianglesCollection): THREE.Vector3 {
+        this.tempRay.origin.copy(ray.origin);
+        this.tempRay.direction.copy(ray.direction);
 
-        const hitData = new HitData();
-        if (hittableCollection.hit(ray, new Interval(0.001, Infinity), hitData)) {
-            const direction = hitData.normal.clone().add(VectorUtils.randomUnitVector());
-            direction.normalize();
-            return this.getRayColor(new THREE.Ray(hitData.point, direction), depth-1, hittableCollection).multiplyScalar(0.5);
+        this.attenuation.set(1, 1, 1);
+
+        for (let bounce = 0; bounce < bounces; bounce++) {
+            if (!world.hit(this.tempRay, this.interval, this.hitData)) {
+
+                const t = 0.5 * (this.tempRay.direction.y + 1);
+
+                this.tempColor.copy(this.skyYellow);
+                this.tempColor.lerp(this.skyBlue, t);
+                this.tempColor.multiply(this.attenuation);
+
+                return this.tempColor;
+            }
+
+            this.attenuation.multiplyScalar(0.5);
+
+            this.tempDirection.copy(VectorUtils.randomOnSurface(this.hitData.normal));
+            // this.tempDirection.copy(this.hitData.normal);
+            // this.tempDirection.reflect(this.tempRay.direction);
+            // this.tempDirection.addScaledVector(VectorUtils.randomVector(), 2).normalize();
+
+            this.tempRay.origin.copy(this.hitData.point);
+            this.tempRay.direction.copy(this.tempDirection);
         }
 
-        const unitDirection = ray.direction.clone().normalize();
-
-        const t = 0.5 * (unitDirection.y + 1.0);
-
-        const yellow = new THREE.Vector3(1.0, 0.75, 0.5);
-        const blue = new THREE.Vector3(0.5, 0.75, 1.0);
-
-        return yellow.lerp(blue, t);
+        this.tempColor.set(0, 0, 0);
+        return this.tempColor;
     }
     
     public writeColorIntoPixelArray(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3, alphaValue: number = 1): void {
@@ -152,7 +174,7 @@ export class RayTracingRenderer {
             this.storeUpdatedScreenToViewportPoint(this.jitter.x, this.jitter.y);
             this.updateRayDirection();
 
-            this.storedRayColor.add(this.getRayColor(this.storedRay, this.depth, this.hittableCollection));
+            this.storedRayColor.add(this.getRayColor(this.storedRay, this.rayBounces, this.hittableCollection));
         }
         this.storedRayColor.multiplyScalar(this.pixelSamplesScale);
     }
