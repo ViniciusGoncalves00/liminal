@@ -62,8 +62,8 @@ export class TrianglesCollection implements Hittable {
         });
     }
 
-    public hit(ray: THREE.Ray, interval: Interval, hitData: HitData): boolean {
-        const tempHitData: HitData = new HitData();
+    public hit(ray: THREE.Ray, interval: Interval, hit: HitData): boolean {
+        const temp: HitData = new HitData();
         let hitSomething = false;
         let closestSoFar = interval.max;
 
@@ -71,15 +71,18 @@ export class TrianglesCollection implements Hittable {
 
         for (let index = 0; index < this.triangles.length; index++) {
             const hittable = this.triangles[index];
-            if (!hittable.hit(ray, rayInterval, tempHitData)) continue;
+            if (!hittable.hit(ray, rayInterval, temp)) continue;
             
             hitSomething = true;
-            closestSoFar = tempHitData.t;
+            closestSoFar = temp.t;
             rayInterval.max = closestSoFar;
 
-            hitData.setPoint(tempHitData.point);
-            hitData.setT(tempHitData.t);
-            hitData.setFaceNormal(ray, tempHitData.normal);
+            hit.point.copy(temp.point);
+            hit.normal.copy(temp.normal);
+            hit.t = temp.t;
+            hit.material = temp.material;
+            hit.mesh = temp.mesh;
+            hit.frontFace = temp.frontFace;
         }
 
         return hitSomething;

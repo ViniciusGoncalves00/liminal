@@ -19,7 +19,7 @@ export class RayTracingRenderer {
     public readonly storedRay: THREE.Ray = new THREE.Ray();
     public readonly storedRayColor: THREE.Vector3 = new THREE.Vector3();
 
-    public readonly antiAliasingActive: boolean = true;
+    public readonly antiAliasingActive: boolean = false;
     public readonly depth: number = 10;
     private readonly jitter = new THREE.Vector3();
 
@@ -28,16 +28,18 @@ export class RayTracingRenderer {
     private readonly cameraRight = new THREE.Vector3();
     private readonly cameraUp = new THREE.Vector3();
 
-    private readonly tempDirection = new THREE.Vector3();
+    private readonly currentRayDirection = new THREE.Vector3();
 
     private cameraHalfWidth: number = 0;
     private cameraHalfHeight: number = 0;
-
+    
+    // #region SAVED
     private screenX: number = 0;
     private screenY: number = 0;
 
-    private renderLoopX: number = 0;
-    private renderLoopY: number = 0;
+    private viewportY: number = 0;
+    private viewportX: number = 0;
+    // #endregion
 
     public readonly hittableCollection: TrianglesCollection = new TrianglesCollection();
 
@@ -46,8 +48,9 @@ export class RayTracingRenderer {
     private pixels: Uint8ClampedArray;
     private colorInterval: Interval = new Interval(0, 1);
 
-    private samplesPerPixel: number = 5;
+    private samplesPerPixel: number = 10;
     private pixelSamplesScale: number = 1 / this.samplesPerPixel;
+
 
     public constructor(parameters?: RayTracingRendererParameters | undefined) {
         this.domElement = (parameters?.canvas as HTMLCanvasElement) ?? document.createElement('canvas');
@@ -64,25 +67,19 @@ export class RayTracingRenderer {
 
         this.storedRay.origin.copy(camera.position);
 
-        for (this.renderLoopX = 0; this.renderLoopX < this.domElement.width; this.renderLoopX++) {
-            for (this.renderLoopY = 0; this.renderLoopY < this.domElement.height; this.renderLoopY++) {
+        for (this.screenX = 0; this.screenX < this.domElement.width; this.screenX++) {
+            for (this.screenY = 0; this.screenY < this.domElement.height; this.screenY++) {
+                this.storeUpdatedScreenToViewportPoint();
+                this.updateRayDirection();
 
-                this.screenX = ((this.renderLoopX + 0.5) / this.domElement.width) * 2 - 1;
-                this.screenY = 1 - ((this.renderLoopY + 0.5) / this.domElement.height) * 2;
+                this.storedRay.direction.copy(this.currentRayDirection);
 
-                this.tempDirection.copy(this.cameraForward);
-                this.tempDirection.addScaledVector(this.cameraRight, this.screenX * this.cameraHalfWidth);
-                this.tempDirection.addScaledVector(this.cameraUp, this.screenY * this.cameraHalfHeight);
-                this.tempDirection.normalize();
-
-                this.storedRay.direction.copy(this.tempDirection);
-
-                const index = (this.renderLoopY * this.domElement.width + this.renderLoopX) * 4;
+                const index = (this.screenY * this.domElement.width + this.screenX) * 4;
 
                 this.storedRayColor.set(0, 0, 0);
 
                 if (this.antiAliasingActive) {
-                    this.antiAliasing(camera, this.renderLoopX, this.renderLoopY);
+                    this.applyAntiAliasing();
                 } else {
                     this.storedRayColor.add(this.getRayColor(this.storedRay, this.depth, this.hittableCollection));
                 }
@@ -94,10 +91,6 @@ export class RayTracingRenderer {
         this.canvasContext.putImageData(this.imageData, 0, 0);
     }
 
-    public handlePixel(): void {
-
-    }
-
     public storeUpdatedCameraValues(camera: THREE.PerspectiveCamera): void {
         this.cameraPosition.copy(camera.position);
         camera.getWorldDirection(this.cameraForward);
@@ -106,6 +99,11 @@ export class RayTracingRenderer {
 
         this.cameraHalfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
         this.cameraHalfWidth = this.cameraHalfHeight * camera.aspect;
+    }
+
+    public storeUpdatedScreenToViewportPoint(jitterX = 0, jitterY = 0): void {
+        this.viewportX = ((this.screenX + 0.5 + jitterX) / this.domElement.width) * 2 - 1;
+        this.viewportY = 1 - ((this.screenY + 0.5 + jitterY) / this.domElement.height) * 2;
     }
 
     public getRayColor(ray: THREE.Ray, depth: number, hittableCollection: TrianglesCollection): THREE.Vector3 {
@@ -120,12 +118,12 @@ export class RayTracingRenderer {
 
         const unitDirection = ray.direction.clone().normalize();
 
-        const a = 0.5 * (unitDirection.y + 1.0);
+        const t = 0.5 * (unitDirection.y + 1.0);
 
-        const white = new THREE.Vector3(1.0, 1.0, 1.0);
-        const blue = new THREE.Vector3(0.5, 0.7, 1.0);
+        const yellow = new THREE.Vector3(1.0, 0.75, 0.5);
+        const blue = new THREE.Vector3(0.5, 0.75, 1.0);
 
-        return white.lerp(blue, a);
+        return yellow.lerp(blue, t);
     }
     
     public writeColorIntoPixelArray(pixels: Uint8ClampedArray, index: number, color: THREE.Vector3, alphaValue: number = 1): void {
@@ -143,30 +141,28 @@ export class RayTracingRenderer {
         return new THREE.Vector3(pixels[index + 0], pixels[index + 1], pixels[index + 2]);
     }
 
-    public randomizeJitterWithSquareSample(): THREE.Vector3 {
-        this.jitter.set(Math.random() - 0.5,Math.random() - 0.5, 0);
+    public randomizePixelJitter(): THREE.Vector3 {
+        this.jitter.set(Math.random() - 0.5, Math.random() - 0.5, 0);
         return this.jitter;
     }
 
-    public antiAliasing(camera: THREE.PerspectiveCamera, x: number, y: number) {
+    public applyAntiAliasing() {
         for (let sample = 0; sample < this.samplesPerPixel; sample++) {
-            this.randomizeJitterWithSquareSample();
-            this.generateRay(x, y, this.jitter.x, this.jitter.y);
+            this.randomizePixelJitter();
+            this.storeUpdatedScreenToViewportPoint(this.jitter.x, this.jitter.y);
+            this.updateRayDirection();
 
             this.storedRayColor.add(this.getRayColor(this.storedRay, this.depth, this.hittableCollection));
         }
         this.storedRayColor.multiplyScalar(this.pixelSamplesScale);
     }
 
-    private generateRay(pixelX: number,pixelY: number, jitterX = 0, jitterY = 0): void {
-        this.screenX = ((pixelX + 0.5 + jitterX) / this.domElement.width) * 2 - 1;
-        this.screenY = 1 - ((pixelY + 0.5 + jitterY) / this.domElement.height) * 2;
+    private updateRayDirection(): void {
+        this.currentRayDirection.copy(this.cameraForward);
+        this.currentRayDirection.addScaledVector(this.cameraRight, this.viewportX * this.cameraHalfWidth);
+        this.currentRayDirection.addScaledVector(this.cameraUp, this.viewportY * this.cameraHalfHeight);
+        this.currentRayDirection.normalize();
 
-        this.tempDirection.copy(this.cameraForward);
-        this.tempDirection.addScaledVector(this.cameraRight, this.screenX * this.cameraHalfWidth);
-        this.tempDirection.addScaledVector(this.cameraUp, this.screenY * this.cameraHalfHeight);
-        this.tempDirection.normalize();
-
-        this.storedRay.direction.copy(this.tempDirection);
+        this.storedRay.direction.copy(this.currentRayDirection);
     }
 }

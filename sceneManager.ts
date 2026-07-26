@@ -215,7 +215,7 @@ export class SceneManager {
             10000
         );
 
-        camera.position.set(-1, 1, -1);
+        camera.position.set(0, 0, 5);
         camera.lookAt(0, 0, 0);
 
         return camera;

@@ -37,6 +37,12 @@ left.rotateZ(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
 
+const back = new THREE.Mesh( baseGeometry, material );
+back.position.set(0, 0, -1.5);
+back.rotateX(THREE.MathUtils.degToRad(90));
+
+sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
+
 const loop = () => {
     requestAnimationFrame(loop);
     sceneManager.animate();
