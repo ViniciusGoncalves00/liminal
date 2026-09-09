@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RayTracingRenderer } from './ray-tracing-renderer';
+import { RayTracerRenderer } from './raytracer/ray-tracer-renderer';
 
 export const SceneLayer = {
     Game: 0,
@@ -18,7 +19,8 @@ export class SceneManager {
 
     private readonly editorRenderer: THREE.WebGLRenderer;
     // private readonly gameRenderer: THREE.WebGLRenderer;
-    private readonly gameRayTracingRenderer: RayTracingRenderer;
+    // private readonly gameRayTracingRenderer: RayTracingRenderer;
+    private readonly gameRayTracerRenderer: RayTracerRenderer;
 
     public readonly editorCamera: THREE.PerspectiveCamera;
     public readonly gameCamera: THREE.PerspectiveCamera;
@@ -48,11 +50,14 @@ export class SceneManager {
         const xRays = 19;
         const yRays = 11;
 
-        this.gameRayTracingRenderer = new RayTracingRenderer({
-            canvas: this.gameView,
-            xRays: xRays,
-            yRays: yRays
-        });
+        // this.gameRayTracingRenderer = new RayTracingRenderer({
+        //     canvas: this.gameView,
+        //     xRays: xRays,
+        //     yRays: yRays
+        // });
+
+        this.gameRayTracerRenderer = new RayTracerRenderer();
+        this.gameRayTracerRenderer.init(this.gameView);
 
         this.resize();
 
@@ -122,7 +127,7 @@ export class SceneManager {
 
         new OrbitControls(
             this.gameCamera,
-            this.gameRayTracingRenderer.domElement
+            this.gameView
         );
 
         this.createHelpers();
@@ -135,7 +140,8 @@ export class SceneManager {
 
         this.editorRenderer.render(this.scene, this.editorCamera);
         // this.gameRenderer.render(this.scene, this.gameCamera);
-        this.gameRayTracingRenderer.render(this.scene, this.gameCamera);
+        // this.gameRayTracingRenderer.render(this.scene, this.gameCamera);
+        this.gameRayTracerRenderer.render(this.scene, this.gameCamera);
     }
 
     /**
@@ -156,7 +162,8 @@ export class SceneManager {
         }
 
         this.scene.add(object);
-        this.gameRayTracingRenderer.hittableCollection.addObject(this.scene);
+        // this.gameRayTracingRenderer.hittableCollection.addObject(this.scene);
+        this.gameRayTracerRenderer.gpuScene?.update(this.scene);
     }
 
     public addChildObject(
