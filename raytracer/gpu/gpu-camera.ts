@@ -1,13 +1,22 @@
 import * as THREE from "three";
-import { GPU_CAMERA_LAYOUT } from "./gpu-camera-layout";
 
 export class GPUCamera {
+    public static readonly FLOAT_COUNT: number = 20;
+    public static readonly BYTE_SIZE: number = GPUCamera.FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
+    public static readonly SHADER: string = `
+        struct Camera {
+            position : vec4<f32>,
+            forward  : vec4<f32>,
+            right    : vec4<f32>,
+            up       : vec4<f32>,
+            params   : vec4<f32>,
+        };
+    `;
+
     public readonly buffer: GPUBuffer;
 
     private readonly device: GPUDevice;
-    private readonly data = new Float32Array(20);
-    private readonly shader: string = "";
-
+    private readonly data = new Float32Array(GPUCamera.FLOAT_COUNT);
     private readonly forward = new THREE.Vector3();
     private readonly right = new THREE.Vector3();
     private readonly up = new THREE.Vector3();
@@ -17,7 +26,7 @@ export class GPUCamera {
 
         this.buffer =
             device.createBuffer({
-                size: GPU_CAMERA_LAYOUT.byteSize,
+                size: GPUCamera.BYTE_SIZE,
 
                 usage:
                     GPUBufferUsage.UNIFORM |
@@ -67,9 +76,5 @@ export class GPUCamera {
             0,
             this.data
         );
-    }
-
-    public updateShader(): string {
-        return this.shader;
     }
 }

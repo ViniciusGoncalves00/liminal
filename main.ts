@@ -18,7 +18,7 @@ const baseGeometry = new THREE.BoxGeometry( 3, 0.1, 3 );
 const floor = new THREE.Mesh( baseGeometry, material );
 floor.position.set(0, -1.5, 0);
 
-sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
+// sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
 const roof = new THREE.Mesh( baseGeometry, material );
 roof.position.set(0, 1.5, 0);
@@ -29,7 +29,7 @@ const right = new THREE.Mesh( baseGeometry, material );
 right.position.set(1.5, 0, 0);
 right.rotateZ(THREE.MathUtils.degToRad(90));
 
-sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
+// sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
 
 const left = new THREE.Mesh( baseGeometry, material );
 left.position.set(-1.5, 0, 0);

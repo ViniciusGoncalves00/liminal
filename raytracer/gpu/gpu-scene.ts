@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Triangle } from "./gpu-triangle";
+import { GPUTriangle } from "./gpu-triangle";
 
 export class GPUScene {
     private readonly device: GPUDevice;
@@ -7,7 +7,7 @@ export class GPUScene {
     public triangleBuffer!: GPUBuffer;
     public materialBuffer!: GPUBuffer;
 
-    private readonly triangleData: Triangle[] = [];
+    private readonly triangleData: GPUTriangle[] = [];
     private readonly materialData: Float32Array[] = [];
 
     private readonly materialMap =
@@ -127,7 +127,7 @@ export class GPUScene {
 
     private pushTriangle(materialId: number): void {
         this.triangleData.push(
-            new Triangle(
+            new GPUTriangle(
                 this.a,
                 this.b,
                 this.c,
@@ -199,7 +199,7 @@ export class GPUScene {
             Math.max(
                 triangleCount,
                 1
-            ) * Triangle.BYTE_SIZE;
+            ) * GPUTriangle.BYTE_SIZE;
 
         const triangleArrayBuffer =
             new ArrayBuffer(
@@ -213,7 +213,7 @@ export class GPUScene {
         ) {
             this.triangleData[i].write(
                 triangleArrayBuffer,
-                i * Triangle.BYTE_SIZE
+                i * GPUTriangle.BYTE_SIZE
             );
         }
 

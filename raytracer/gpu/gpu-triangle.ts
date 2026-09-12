@@ -1,14 +1,26 @@
 import * as THREE from "three";
 
-export class Triangle {
+export class GPUTriangle {
+    public static readonly FLOAT_COUNT: number = 16;
+    public static readonly BYTE_SIZE: number = GPUTriangle.FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
+    public static readonly SHADER: string = `
+        struct Triangle {
+            p0 : vec4<f32>,
+            p1 : vec4<f32>,
+            p2 : vec4<f32>,
+
+            materialId : u32,
+            _pad0 : u32,
+            _pad1 : u32,
+            _pad2 : u32,
+        };
+    `;
+
     public readonly p0 = new THREE.Vector4();
     public readonly p1 = new THREE.Vector4();
     public readonly p2 = new THREE.Vector4();
 
     public materialId = 0;
-
-    public static readonly BYTE_SIZE = 64;
-    public static readonly FLOAT_COUNT = 16;
 
     public constructor(p0?: THREE.Vector3, p1?: THREE.Vector3, p2?: THREE.Vector3, materialId = 0) {
         if (p0) this.p0.set(p0.x, p0.y, p0.z, 1);
@@ -29,8 +41,8 @@ export class Triangle {
     }
 
     public write(buffer: ArrayBuffer, byteOffset = 0): void {
-        const floats = new Float32Array(buffer, byteOffset, Triangle.FLOAT_COUNT);
-        const uints = new Uint32Array(buffer, byteOffset, Triangle.FLOAT_COUNT);
+        const floats = new Float32Array(buffer, byteOffset, GPUTriangle.FLOAT_COUNT);
+        const uints = new Uint32Array(buffer, byteOffset, GPUTriangle.FLOAT_COUNT);
 
         let i = 0;
 
