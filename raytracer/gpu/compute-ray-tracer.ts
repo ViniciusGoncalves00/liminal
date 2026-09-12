@@ -1,6 +1,6 @@
 import { GPUCamera } from "./gpu-camera";
-import { GPU_CAMERA_SHADER } from "./gpu-camera-layout";
 import { GPUScene } from "./gpu-scene";
+import { GPUTriangle } from "./gpu-triangle";
 
 export class ComputeRayTracer {
 
@@ -48,18 +48,8 @@ export class ComputeRayTracer {
             device.createShaderModule({
 
                 code: `
-                    ${GPU_CAMERA_SHADER}
-
-                    struct Triangle {
-                        p0 : vec4<f32>,
-                        p1 : vec4<f32>,
-                        p2 : vec4<f32>,
-
-                        materialId : u32,
-                        _pad0 : u32,
-                        _pad1 : u32,
-                        _pad2 : u32,
-                    };
+                    ${GPUCamera.SHADER}
+                    ${GPUTriangle.SHADER}
 
                     struct Material {
                         baseColor : vec4<f32>,
@@ -173,6 +163,7 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
 
                         var uv = (vec2<f32>(id.xy) + vec2<f32>(0.5)) / vec2<f32>(textureSize);
                         uv = uv * 2.0 - 1.0;
+                        uv.y = -uv.y;
 
                         uv.x *= aspect;
                         uv *= scale;
