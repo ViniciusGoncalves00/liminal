@@ -118,7 +118,7 @@ export class SceneManager {
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const material = new THREE.LineBasicMaterial({color: 0xffff00});
         const rays = new THREE.LineSegments(geometry, material);
-        this.gameCamera.add(rays);
+        // this.gameCamera.add(rays);
 
         this.editorControls = new OrbitControls(
             this.editorCamera,

@@ -12,8 +12,11 @@ export class RayTracerRenderer {
     private accumulationPass: AccumulationPass | null = null;
     private computeRayTracer: ComputeRayTracer | null = null;
     private presentPass: PresentPass | null = null;
+    private canvas: HTMLCanvasElement | null = null;
 
     public async init(canvas: HTMLCanvasElement): Promise<void> {
+        this.canvas = canvas;
+        
         const adapter = await navigator.gpu.requestAdapter();
         if(!adapter) {
             console.log("Adapter cannot be found.");
@@ -36,12 +39,16 @@ export class RayTracerRenderer {
         this.gpuCamera = new GPUCamera(this.device);
         this.gpuScene = new GPUScene(this.device);
         this.accumulationPass = new AccumulationPass();
-        this.computeRayTracer = new ComputeRayTracer(this.device, canvas.width, canvas.height);
+        this.computeRayTracer = new ComputeRayTracer(this.device, this.canvas!.width, this.canvas!.height);
         this.presentPass = new PresentPass(this.device, context, format);
+
+        this.device.addEventListener("uncapturederror", event => {
+            console.error("My custom WebGPU error:", event.error);
+        });
     }
 
     public render(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
-        this.gpuCamera?.update(camera);
+        this.gpuCamera?.update(camera, this.canvas!.width / this.canvas!.height);
         this.gpuScene?.update(scene);
         
         this.computeRayTracer?.render(this.gpuCamera!, this.gpuScene!);

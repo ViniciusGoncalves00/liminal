@@ -1,18 +1,17 @@
 import * as THREE from "three";
+import { Triangle } from "./gpu-triangle";
 
 export class GPUScene {
-    private readonly device: GPUDevice
-
-    public readonly triangles = new Float32Array(0);
-    public readonly materials = new Float32Array(0);
+    private readonly device: GPUDevice;
 
     public triangleBuffer!: GPUBuffer;
     public materialBuffer!: GPUBuffer;
 
-    private readonly triangleData: number[] = [];
-    private readonly materialData: number[] = [];
+    private readonly triangleData: Triangle[] = [];
+    private readonly materialData: Float32Array[] = [];
 
-    private readonly materialMap = new Map<THREE.Material, number>();
+    private readonly materialMap =
+        new Map<THREE.Material, number>();
 
     private readonly a = new THREE.Vector3();
     private readonly b = new THREE.Vector3();
@@ -50,139 +49,266 @@ export class GPUScene {
         if (!positions)
             return;
 
-        const index = geometry.index;
+        /*
+         * Por enquanto suportamos apenas um material
+         * por Mesh.
+         */
+        if (Array.isArray(mesh.material))
+            throw new Error(
+                "Multiple materials are not supported yet."
+            );
 
+        const material =
+            mesh.material as THREE.MeshStandardMaterial;
+
+        const materialId =
+            this.addMaterial(material);
+
+        const index = geometry.index;
         const world = mesh.matrixWorld;
-        
-        const materialId = this.addMaterial(mesh.material as THREE.Material);
 
         if (index) {
+
             for (let i = 0; i < index.count; i += 3) {
-                this.a.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
-                this.b.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
-                this.c.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
+
+                this.a
+                    .fromBufferAttribute(
+                        positions,
+                        index.getX(i)
+                    )
+                    .applyMatrix4(world);
+
+                this.b
+                    .fromBufferAttribute(
+                        positions,
+                        index.getX(i + 1)
+                    )
+                    .applyMatrix4(world);
+
+                this.c
+                    .fromBufferAttribute(
+                        positions,
+                        index.getX(i + 2)
+                    )
+                    .applyMatrix4(world);
 
                 this.pushTriangle(materialId);
             }
-        }
-        else {
+
+        } else {
+
             for (let i = 0; i < positions.count; i += 3) {
 
-                this.a.fromBufferAttribute(positions, i).applyMatrix4(world);
-                this.b.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
-                this.c.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
+                this.a
+                    .fromBufferAttribute(
+                        positions,
+                        i
+                    )
+                    .applyMatrix4(world);
+
+                this.b
+                    .fromBufferAttribute(
+                        positions,
+                        i + 1
+                    )
+                    .applyMatrix4(world);
+
+                this.c
+                    .fromBufferAttribute(
+                        positions,
+                        i + 2
+                    )
+                    .applyMatrix4(world);
 
                 this.pushTriangle(materialId);
             }
         }
-
     }
 
     private pushTriangle(materialId: number): void {
         this.triangleData.push(
-            this.a.x,
-            this.a.y,
-            this.a.z,
-
-            this.b.x,
-            this.b.y,
-            this.b.z,
-
-            this.c.x,
-            this.c.y,
-            this.c.z,
-
-            materialId
+            new Triangle(
+                this.a,
+                this.b,
+                this.c,
+                materialId
+            )
         );
-
     }
 
-    private addMaterial(material: THREE.Material): number {
-        const existing = this.materialMap.get(material);
+    private addMaterial(
+        material: THREE.MeshStandardMaterial
+    ): number {
+
+        const existing =
+            this.materialMap.get(material);
 
         if (existing !== undefined)
             return existing;
-
-        const standard = material as THREE.MeshStandardMaterial;
 
         const id = this.materialMap.size;
 
         this.materialMap.set(material, id);
 
-        this.materialData.push(
+        /*
+         * WGSL:
+         *
+         * struct Material {
+         *     baseColor : vec4<f32>,
+         *     properties : vec4<f32>,
+         * };
+         */
 
-            standard.color.r,
-            standard.color.g,
-            standard.color.b,
+        const data = new Float32Array(8);
 
-            standard.roughness ?? 1,
-            standard.metalness ?? 0,
+        // baseColor
+        data[0] = material.color.r;
+        data[1] = material.color.g;
+        data[2] = material.color.b;
+        data[3] = material.opacity;
 
-            0,
-            0,
-            0
+        // properties
+        data[4] = material.roughness;
+        data[5] = material.metalness;
+        data[6] = material.emissiveIntensity;
+        data[7] = 1.5; // IOR/reservado
 
-        );
+        this.materialData.push(data);
 
         return id;
-
     }
 
     private uploadBuffers(): void {
 
-        const triangles = new Float32Array(this.triangleData);
-        const materials = new Float32Array(this.materialData);
+        // ============================================================
+        // TRIANGLES
+        // ============================================================
+
+        /*
+         * Cada Triangle ocupa exatamente 64 bytes.
+         */
+
+        const triangleCount =
+            this.triangleData.length;
+
+        /*
+         * Mantemos pelo menos um elemento para que
+         * triangles[0] seja válido no shader.
+         */
+        const triangleBufferSize =
+            Math.max(
+                triangleCount,
+                1
+            ) * Triangle.BYTE_SIZE;
+
+        const triangleArrayBuffer =
+            new ArrayBuffer(
+                triangleBufferSize
+            );
+
+        for (
+            let i = 0;
+            i < triangleCount;
+            i++
+        ) {
+            this.triangleData[i].write(
+                triangleArrayBuffer,
+                i * Triangle.BYTE_SIZE
+            );
+        }
+
+        // ============================================================
+        // MATERIALS
+        // ============================================================
+
+        const materialCount =
+            this.materialData.length;
+
+        /*
+         * Cada material possui 8 floats = 32 bytes.
+         */
+        const materialBufferSize =
+            Math.max(materialCount, 1) * 8 * 4;
+
+        const materialArrayBuffer =
+            new ArrayBuffer(
+                materialBufferSize
+            );
+
+        const materialFloats =
+            new Float32Array(
+                materialArrayBuffer
+            );
+
+        for (
+            let i = 0;
+            i < materialCount;
+            i++
+        ) {
+            materialFloats.set(
+                this.materialData[i],
+                i * 8
+            );
+        }
+
+        // ============================================================
+        // GPU TRIANGLE BUFFER
+        // ============================================================
 
         if (
             !this.triangleBuffer ||
-            this.triangleBuffer.size < triangles.byteLength
+            this.triangleBuffer.size <
+                triangleBufferSize
         ) {
 
             this.triangleBuffer?.destroy();
 
-            this.triangleBuffer = this.device.createBuffer({
+            this.triangleBuffer =
+                this.device.createBuffer({
+                    size: triangleBufferSize,
 
-                size: triangles.byteLength,
-
-                usage:
-                    GPUBufferUsage.STORAGE |
-                    GPUBufferUsage.COPY_DST
-
-            });
-
+                    usage:
+                        GPUBufferUsage.STORAGE |
+                        GPUBufferUsage.COPY_DST
+                });
         }
+
+        // ============================================================
+        // GPU MATERIAL BUFFER
+        // ============================================================
 
         if (
             !this.materialBuffer ||
-            this.materialBuffer.size < materials.byteLength
+            this.materialBuffer.size <
+                materialBufferSize
         ) {
 
             this.materialBuffer?.destroy();
 
-            this.materialBuffer = this.device.createBuffer({
+            this.materialBuffer =
+                this.device.createBuffer({
+                    size: materialBufferSize,
 
-                size: materials.byteLength,
-
-                usage:
-                    GPUBufferUsage.STORAGE |
-                    GPUBufferUsage.COPY_DST
-
-            });
-
+                    usage:
+                        GPUBufferUsage.STORAGE |
+                        GPUBufferUsage.COPY_DST
+                });
         }
+
+        // ============================================================
+        // CPU -> GPU
+        // ============================================================
 
         this.device.queue.writeBuffer(
             this.triangleBuffer,
             0,
-            triangles
+            triangleArrayBuffer
         );
 
         this.device.queue.writeBuffer(
             this.materialBuffer,
             0,
-            materials
+            materialArrayBuffer
         );
-
     }
-
 }

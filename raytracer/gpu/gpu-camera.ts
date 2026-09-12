@@ -1,30 +1,39 @@
-import * as THREE from 'three';
+import * as THREE from "three";
+import { GPU_CAMERA_LAYOUT } from "./gpu-camera-layout";
 
 export class GPUCamera {
-    private readonly device: GPUDevice;
-    private readonly data: Float32Array = new Float32Array(20);
     public readonly buffer: GPUBuffer;
+
+    private readonly device: GPUDevice;
+    private readonly data = new Float32Array(20);
+    private readonly shader: string = "";
+
+    private readonly forward = new THREE.Vector3();
+    private readonly right = new THREE.Vector3();
+    private readonly up = new THREE.Vector3();
 
     public constructor(device: GPUDevice) {
         this.device = device;
-        this.buffer = device.createBuffer({
-            size: this.data.byteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-        });
+
+        this.buffer =
+            device.createBuffer({
+                size: GPU_CAMERA_LAYOUT.byteSize,
+
+                usage:
+                    GPUBufferUsage.UNIFORM |
+                    GPUBufferUsage.COPY_DST
+            });
     }
 
-    public update(camera: THREE.PerspectiveCamera) {
-        const forward = new THREE.Vector3();
-        const right = new THREE.Vector3();
-        const up = new THREE.Vector3();
+    public update(camera: THREE.PerspectiveCamera, aspect: number) {
+        camera.updateMatrixWorld(true);
+        camera.getWorldDirection(this.forward);
 
-        camera.getWorldDirection(forward);
+        this.right.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        this.up.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
 
-        right.crossVectors(forward, camera.up).normalize();
-        up.crossVectors(right, forward).normalize();
-
-        const tanHalfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
-        const tanHalfWidth = tanHalfHeight * camera.aspect;
+        const fovRadians = THREE.MathUtils.degToRad(camera.fov);
+        const halfFovScale = Math.tan(fovRadians * 0.5);
 
         this.data.set([
             camera.position.x,
@@ -32,25 +41,25 @@ export class GPUCamera {
             camera.position.z,
             0,
 
-            forward.x,
-            forward.y,
-            forward.z,
+            this.forward.x,
+            this.forward.y,
+            this.forward.z,
             0,
 
-            right.x,
-            right.y,
-            right.z,
+            this.right.x,
+            this.right.y,
+            this.right.z,
             0,
 
-            up.x,
-            up.y,
-            up.z,
+            this.up.x,
+            this.up.y,
+            this.up.z,
             0,
 
-            tanHalfWidth,
-            tanHalfHeight,
-            camera.near,
-            camera.far
+            halfFovScale,
+            aspect,
+            0,
+            0
         ]);
 
         this.device.queue.writeBuffer(
@@ -60,4 +69,7 @@ export class GPUCamera {
         );
     }
 
+    public updateShader(): string {
+        return this.shader;
+    }
 }
