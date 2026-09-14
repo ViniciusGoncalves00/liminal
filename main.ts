@@ -10,38 +10,44 @@ const sceneManager = new SceneManager(editorView, gameView);
 
 const geometry = new THREE.BoxGeometry( 1, 1, 1 );
 const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
+const cube = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial( { color: 0xff0000 } ));
 
 sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
-const baseGeometry = new THREE.BoxGeometry( 3, 0.1, 3 );
-const floor = new THREE.Mesh( baseGeometry, material );
-floor.position.set(0, -1.5, 0);
+const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
+const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+floor.position.set(0, -2.5, 0);
 
-// sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
+sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
-const roof = new THREE.Mesh( baseGeometry, material );
-roof.position.set(0, 1.5, 0);
+const roof = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+roof.position.set(0, 2.5, 0);
 
 sceneManager.addObject(roof, SceneLayer.Game, SceneLayer.Editor);
 
-const right = new THREE.Mesh( baseGeometry, material );
-right.position.set(1.5, 0, 0);
+const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+right.position.set(2.5, 0, 0);
 right.rotateZ(THREE.MathUtils.degToRad(90));
 
-// sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
+sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
 
-const left = new THREE.Mesh( baseGeometry, material );
-left.position.set(-1.5, 0, 0);
+const left = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+left.position.set(-2.5, 0, 0);
 left.rotateZ(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
 
-// const back = new THREE.Mesh( baseGeometry, material );
-// back.position.set(0, 0, -1.5);
-// back.rotateX(THREE.MathUtils.degToRad(90));
+const back = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+back.position.set(0, 0, -2.5);
+back.rotateX(THREE.MathUtils.degToRad(90));
 
-// sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
+sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
+
+// const front = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+// front.position.set(0, 0, 2.5);
+// front.rotateX(THREE.MathUtils.degToRad(90));
+
+// sceneManager.addObject(front, SceneLayer.Game, SceneLayer.Editor);
 
 const loop = () => {
     requestAnimationFrame(loop);

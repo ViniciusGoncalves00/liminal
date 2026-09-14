@@ -6,6 +6,7 @@ export class ComputeRayTracer {
 
     public readonly outputTexture: GPUTexture;
     public readonly gpuTextureView: GPUTextureView;
+    private timeBuffer: GPUBuffer | null = null;
 
     private readonly device: GPUDevice;
     private readonly pipeline: GPUComputePipeline;
@@ -37,6 +38,11 @@ export class ComputeRayTracer {
                     GPUTextureUsage.TEXTURE_BINDING
             });
 
+        this.timeBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
         this.gpuTextureView =
             this.outputTexture.createView();
 
@@ -56,10 +62,15 @@ export class ComputeRayTracer {
                         properties : vec4<f32>,
                     };
 
-                    fn intersectTriangle(
+                    struct Time {
+                        value: f32,
+                    };
+
+fn intersectTriangle(
     origin: vec3<f32>,
     direction: vec3<f32>,
-    triangle: Triangle
+    triangle: Triangle,
+    hitNormal: ptr<function, vec3<f32>>
 ) -> f32 {
 
     let edge1 = triangle.p1.xyz - triangle.p0.xyz;
@@ -69,7 +80,6 @@ export class ComputeRayTracer {
 
     let det = dot(edge1, pvec);
 
-    // Parallel / nearly parallel
     if (abs(det) < 0.000001) {
         return -1.0;
     }
@@ -98,6 +108,8 @@ export class ComputeRayTracer {
         return -1.0;
     }
 
+    *hitNormal = normalize(cross(edge1, edge2));
+
     return t;
 }
 
@@ -107,6 +119,97 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
     return hsv.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), hsv.y);
 }
 
+fn random(seed: ptr<function, u32>) -> f32 {
+    var x = *seed;
+
+    x ^= x >> 16u;
+    x *= 0x7feb352du;
+    x ^= x >> 15u;
+    x *= 0x846ca68bu;
+    x ^= x >> 16u;
+
+    *seed = x;
+
+    return f32(x) / 4294967295.0;
+}
+
+fn randomRange(
+    seed: ptr<function, u32>,
+    min: f32,
+    max: f32
+) -> f32 {
+    return min + random(seed) * (max - min);
+}
+
+fn randomUnitVector(seed: ptr<function, u32>) -> vec3<f32> {
+    let z = random(seed) * 2.0 - 1.0;
+    let phi = random(seed) * 2.0 * 3.14159265;
+
+    let r = sqrt(1.0 - z * z);
+
+    return vec3<f32>(
+        r * cos(phi),
+        r * sin(phi),
+        z
+    );
+}
+
+fn randomHemisphere(
+    normal: vec3<f32>,
+    seed: ptr<function, u32>
+) -> vec3<f32> {
+
+    var direction = randomUnitVector(seed);
+
+    if (dot(direction, normal) < 0.0) {
+        direction = -direction;
+    }
+
+    return direction;
+}
+
+fn cosineWeightedHemisphere(
+    normal: vec3<f32>,
+    seed: ptr<function, u32>
+) -> vec3<f32> {
+
+    let r1 = random(seed);
+    let r2 = random(seed);
+
+    let phi = 2.0 * 3.14159265 * r1;
+    let r = sqrt(r2);
+
+    let x = r * cos(phi);
+    let y = r * sin(phi);
+    let z = sqrt(1.0 - r2);
+
+    // Base ortonormal ao redor da normal
+    var tangent: vec3<f32>;
+
+    if (abs(normal.x) > 0.1) {
+        tangent = normalize(
+            cross(
+                vec3<f32>(0.0, 1.0, 0.0),
+                normal
+            )
+        );
+    } else {
+        tangent = normalize(
+            cross(
+                vec3<f32>(1.0, 0.0, 0.0),
+                normal
+            )
+        );
+    }
+
+    let bitangent = cross(normal, tangent);
+
+    return normalize(
+        tangent * x +
+        bitangent * y +
+        normal * z
+    );
+}
 
                     // =================================================
                     // Resources
@@ -130,6 +233,8 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
                             write
                         >;
 
+                    @group(0) @binding(4)
+                    var<uniform> time: Time;
 
                     // =================================================
                     // Main
@@ -168,97 +273,140 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
                         uv.x *= aspect;
                         uv *= scale;
 
-                        let origin = camera.position.xyz;
+                        var origin = camera.position.xyz;
 
-                        let direction = normalize(
+                        var direction = normalize(
                             camera.forward.xyz +
                             uv.x * camera.right.xyz +
                             uv.y * camera.up.xyz
                         );
 
+                        const samplesPerPixel = 1u;
 
-                        var closestT = 1e30;
-                        var hitMaterialId = 0u;
-                        var hit = false;
+                        var accumulatedColor = vec3<f32>(0.0);
 
-                        let triangleCount =
-                            arrayLength(&triangles);
+                        var bounces = 16u;
+                        var lastBounce = 0u;
+                        var hitScaped = false;
 
-                        for (var i = 0u; i < triangleCount; i++) {
-                            let triangle = triangles[i];
+                        for (var sample = 0u; sample < samplesPerPixel; sample++) {
+                            var seed = id.x + id.y * textureSize.x + sample * 1973u;
+                            
+                            // --------------------------------------------------------
+                            // Subpixel jitter
+                            // --------------------------------------------------------
 
-                            let t = intersectTriangle(origin, direction, triangle);
+                            var randomX = random(&seed);
+                            var randomY = random(&seed);
 
-                                if (
-                                    t > 0.0 &&
-                                    t < closestT
-                                ) {
-                                    closestT = t;
-                                    hitMaterialId = triangle.materialId;
-                                    hit = true;
-                                }
+                            if (sample == 0u) {
+                                randomX = 0.5;
+                                randomY = 0.5;
                             }
 
-
-                        // ================================================================
-                        // Background
-                        // ================================================================
-                                
-                        // if (!hit) {
-                        //     var horizontalDirection = normalize(vec2<f32>(direction.x, direction.z));
-                        //     var intensity = 1 - abs(direction.y);
-
-                        //     var angle = atan2(direction.z, direction.x);
-
-                        //     var hue = fract(angle / (2.0 * 3.14159265));
-                        //     var sector = hue * 3.0;
-                        //     var t = fract(sector);
-
-                        //     var strength = 1 - abs(t * 2.0 - 1.0);
-                        //     strength = pow(smoothstep(0.0, 0.8, strength), 1.2);
-
-                        //     let color = hsvToRgb(vec3<f32>(degrees(angle) / 360, 1.0, intensity * strength));
-
-                        //     textureStore(
-                        //         outputTexture,
-                        //         vec2<i32>(id.xy),
-                        //         vec4<f32>(color, 1.0)
-                        //     );
-                                
-                        //     return;
-                        // }
-
-                        if (!hit) {
-                            var intensity = 1.0 - abs(direction.y);
-
-                            let darkBlue = vec3<f32>(0.02, 0.05, 0.15);
-                            let lightBlue = vec3<f32>(0.25, 0.55, 0.85);
-                                        
-                            var color = mix(
-                                darkBlue,
-                                lightBlue,
-                                intensity
+                            let pixel = vec2<f32>(
+                                f32(id.x) + randomX,
+                                f32(id.y) + randomY
                             );
 
-                            textureStore(
-                                outputTexture,
-                                vec2<i32>(id.xy),
-                                vec4<f32>(color, 1.0)
+                            // --------------------------------------------------------
+                            // Pixel -> NDC
+                            // --------------------------------------------------------
+
+                            var uv = pixel / size;
+                            uv = uv * 2.0 - 1.0;
+                            uv.y = -uv.y;
+                            uv.x *= aspect;
+                            uv *= scale;
+
+                            // --------------------------------------------------------
+                            // Ray
+                            // --------------------------------------------------------
+
+                            direction = normalize(
+                                camera.forward.xyz +
+                                uv.x * camera.right.xyz +
+                                uv.y * camera.up.xyz
                             );
-                                
-                            return;
+                            
+                            for (var bounce = 0u; bounce < bounces; bounce++) {
+                                var closestT = 1e30;
+                                var hitMaterialId = 0u;
+                                var hit = false;
+
+                                lastBounce = bounce;
+
+                                var hitNormal = vec3<f32>(0.0);
+                                let triangleCount = arrayLength(&triangles);
+
+                                for (var i = 0u; i < triangleCount; i++) {
+                                    let triangle = triangles[i];
+                                    var triangleNormal = vec3<f32>(0.0);
+
+                                    let t = intersectTriangle(origin, direction, triangle, &triangleNormal);
+
+                                    if (t > 0.0 && t < closestT) {
+                                        closestT = t;
+                                        hitMaterialId = triangle.materialId;
+                                        hitNormal = triangleNormal;
+                                        hit = true;
+                                    }
+                                }
+
+                                // --------------------------------------------------------
+                                // Miss
+                                // --------------------------------------------------------
+
+                                if (!hit) {
+
+                                    let intensity =
+                                        1.0 - abs(direction.y);
+
+                                    let darkBlue =
+                                        vec3<f32>(0.02, 0.05, 0.15);
+
+                                    let lightBlue =
+                                        vec3<f32>(0.25, 0.55, 0.85);
+
+                                    accumulatedColor +=
+                                        mix(darkBlue, lightBlue, intensity);
+
+                                    hitScaped = true;
+                                    break;
+                                }
+
+                                // --------------------------------------------------------
+                                // Hit
+                                // --------------------------------------------------------
+
+                                let hitPoint = origin + direction * closestT;
+
+                                let material = materials[hitMaterialId];
+
+                                accumulatedColor += material.baseColor.rgb * 1.0 / (f32(bounce) + 1.0);
+
+                                // --------------------------------------------------------
+                                // Próximo bounce
+                                // --------------------------------------------------------
+
+                                origin = hitPoint + hitNormal * 0.001;
+                                direction = reflect(direction, hitNormal);
+                                direction.x *= randomRange(&seed, 1.0, 1.2);
+                                direction.y *= randomRange(&seed, 1.0, 1.2);
+                                direction.z *= randomRange(&seed, 1.0, 1.2);
+                                direction = normalize(direction);
+                            }
                         }
 
 
-                        // ================================================================
-                        // Material
-                        // ================================================================
+                        // ============================================================
+                        // Average
+                        // ============================================================
 
-                        let material =
-                            materials[hitMaterialId];
-
-                        let color =
-                            material.baseColor.rgb;
+                        var color = vec3<f32>(0.0);
+                        if (hitScaped) {
+                            color = accumulatedColor / f32(samplesPerPixel) / f32(lastBounce + 1u);
+                        }
 
                         textureStore(
                             outputTexture,
@@ -322,6 +470,17 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
                             format: "rgba16float",
                             viewDimension: "2d"
                         }
+                    },
+
+                    {
+                        binding: 4,
+
+                        visibility:
+                            GPUShaderStage.COMPUTE,
+
+                        buffer: {
+                            type: "uniform"
+                        }
                     }
                 ]
             });
@@ -349,6 +508,13 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
         gpuCamera: GPUCamera,
         gpuScene: GPUScene
     ): void {
+        const time = performance.now() / 1000;
+
+        this.device?.queue.writeBuffer(
+            this.timeBuffer!,
+            0,
+            new Float32Array([time])
+        );
 
         const bindGroup =
             this.device.createBindGroup({
@@ -390,6 +556,15 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
 
                         resource:
                             this.gpuTextureView
+                    },
+
+                    {
+                        binding: 4,
+
+                        resource: {
+                            buffer:
+                                this.timeBuffer
+                        }
                     }
                 ]
             });
