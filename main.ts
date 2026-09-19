@@ -15,15 +15,15 @@ const cube = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial( { color: 
 sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
-const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xddaa22 } ) );
 floor.position.set(0, -2.5, 0);
 
 sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
-const roof = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
-roof.position.set(0, 2.5, 0);
+const ceiling = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
+ceiling.position.set(0, 2.5, 0);
 
-sceneManager.addObject(roof, SceneLayer.Game, SceneLayer.Editor);
+sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
 
 const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee } ) );
 right.position.set(2.5, 0, 0);
