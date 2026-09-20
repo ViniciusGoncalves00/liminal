@@ -41,7 +41,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         uv.y * camera.up.xyz
     );
 
-    const samplesPerPixel = 1u;
+    const samplesPerPixel = 16u;
 
     var bounces = 16u;
     var lastBounce = 0u;
@@ -132,14 +132,16 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         pixelColor += rayColor;
     }
 
-    if (reachedLight) {
-        let colorIntensity = materialLightIntensity / f32(lastBounce + 1u);
-        pixelColor = pixelColor / f32(samplesPerPixel) * colorIntensity;
-    } else if (bounceWentToSky) {
-        pixelColor = pixelColor / f32(samplesPerPixel);
-    } else {
-        pixelColor = vec3<f32>();
-    }
+    // if (reachedLight) {
+    //     let colorIntensity = materialLightIntensity / f32(lastBounce + 1u);
+    //     pixelColor = pixelColor / f32(samplesPerPixel) * colorIntensity;
+    // } else if (bounceWentToSky) {
+    //     pixelColor = pixelColor / f32(samplesPerPixel);
+    // } else {
+    //     pixelColor = vec3<f32>();
+    // }
+
+    pixelColor /= f32(samplesPerPixel);
 
     textureStore(
         outputTexture,

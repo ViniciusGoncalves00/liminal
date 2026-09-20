@@ -25,13 +25,13 @@ ceiling.position.set(0, 2.5, 0);
 
 sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
 
-const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.1, metalness: 0.5 } ) );
+const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.0, metalness: 0.5 } ) );
 right.position.set(2.5, 0, 0);
 right.rotateZ(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
 
-const left = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.1, metalness: 0.5 } ) );
+const left = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ) );
 left.position.set(-2.5, 0, 0);
 left.rotateZ(THREE.MathUtils.degToRad(90));
 
