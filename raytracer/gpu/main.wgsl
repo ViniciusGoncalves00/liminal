@@ -41,9 +41,9 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         uv.y * camera.up.xyz
     );
 
-    const samplesPerPixel = 16u;
+    const samplesPerPixel = 1u;
 
-    var bounces = 32u;
+    var bounces = 16u;
     var lastBounce = 0u;
     var bounceWentToSky = false;
     var reachedLight = false;
@@ -106,7 +106,6 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
 
                 rayColor += mix(lightBlue, darkBlue, intensity);
 
-                // rayColor += vec3<f32>();
                 bounceWentToSky = true;
                 break;
             } else {
@@ -116,18 +115,17 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
                 if (lightIntensity > 1.0) {
                     reachedLight = true;
                     materialLightIntensity = lightIntensity;
-                    // rayColor *= lightIntensity / (f32(bounce) + 1.0);
+                    rayColor *= lightIntensity;
                     break;
                 } else {
                     rayColor += material.baseColor.rgb;
                 }
 
-                origin = intersection.point + intersection.normal * 0.0001;
-                direction = reflect(direction, intersection.normal);
-                // direction.x *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
-                // direction.y *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
-                // direction.z *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
-                direction = normalize(direction);
+                origin = intersection.point + intersection.normal * 0.01;
+                var randomDirection = randomHemisphere(intersection.normal, &seed);
+                var reflectedDirection = reflect(direction, intersection.normal);
+                var materialRoughness = material.properties[0];
+                direction = normalize(mix(reflectedDirection, randomDirection, materialRoughness));
             }
         }
         rayColor /= (f32(lastBounce) + 1.0);
@@ -139,6 +137,8 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         pixelColor = pixelColor / f32(samplesPerPixel) * colorIntensity;
     } else if (bounceWentToSky) {
         pixelColor = pixelColor / f32(samplesPerPixel);
+    } else {
+        pixelColor = vec3<f32>();
     }
 
     textureStore(
