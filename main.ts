@@ -43,9 +43,9 @@ back.rotateX(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
 
-const plafon = new THREE.Mesh( new THREE.BoxGeometry( 1, 0.1, 1 ), new THREE.MeshStandardMaterial( { color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2 } ) );
-plafon.position.set(0, 2.0, 0);
-sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
+// const plafon = new THREE.Mesh( new THREE.BoxGeometry( 1, 0.1, 1 ), new THREE.MeshStandardMaterial( { color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2 } ) );
+// plafon.position.set(0, 2.0, 0);
+// sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
 
 // const front = new THREE.Mesh( new THREE.BoxGeometry( 5, 0.1, 5 ), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ) );
 // front.position.set(0, 0, 2.5);
