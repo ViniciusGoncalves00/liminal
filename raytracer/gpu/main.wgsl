@@ -1,4 +1,4 @@
-@group(0) @binding(0)
+                    @group(0) @binding(0)
                     var<uniform> camera : Camera;
 
                     @group(0) @binding(1)
@@ -66,11 +66,13 @@
 
                         const samplesPerPixel = 1u;
 
-                        var accumulatedColor = vec3<f32>(0.0);
+                        var rayColor = vec3<f32>(0.0);
 
-                        var bounces = 16u;
+                        var bounces = 32u;
                         var lastBounce = 0u;
-                        var hitScaped = false;
+                        var bounceWentToSky = false;
+                        var reachedLight = false;
+                        var materialLightIntensity = 0.0;
 
                         for (var sample = 0u; sample < samplesPerPixel; sample++) {
                             var seed = id.x + id.y * textureSize.x + sample * 1973u;
@@ -121,6 +123,7 @@
 
                                 var hitNormal = vec3<f32>(0.0);
                                 let triangleCount = arrayLength(&triangles);
+                                var hitTriangle: Triangle;
 
                                 for (var i = 0u; i < triangleCount; i++) {
                                     let triangle = triangles[i];
@@ -133,6 +136,7 @@
                                         hitMaterialId = triangle.materialId;
                                         hitNormal = triangleNormal;
                                         hit = true;
+                                        hitTriangle = triangle;
                                     }
                                 }
 
@@ -151,10 +155,11 @@
                                     let lightBlue =
                                         vec3<f32>(0.25, 0.55, 0.85);
 
-                                    accumulatedColor +=
+                                    rayColor +=
                                         mix(darkBlue, lightBlue, intensity);
 
-                                    hitScaped = true;
+                                    // rayColor += vec3<f32>();
+                                    bounceWentToSky = true;
                                     break;
                                 }
 
@@ -166,7 +171,16 @@
 
                                 let material = materials[hitMaterialId];
 
-                                accumulatedColor += material.baseColor.rgb * 1.0 / (f32(bounce) + 1.0);
+                                let lightIntensity = material.properties[2];
+                                if (lightIntensity > 1.0) {
+                                    reachedLight = true;
+                                    materialLightIntensity = lightIntensity;
+                                    // rayColor *= lightIntensity / (f32(bounce) + 1.0);
+                                    break;
+                                } else {
+                                    rayColor += material.baseColor.rgb / (f32(bounce) + 1.0);
+                                }
+                                
 
                                 // --------------------------------------------------------
                                 // Próximo bounce
@@ -174,9 +188,9 @@
 
                                 origin = hitPoint + hitNormal * 0.001;
                                 direction = reflect(direction, hitNormal);
-                                direction.x *= randomRange(&seed, 1.0, 1.2);
-                                direction.y *= randomRange(&seed, 1.0, 1.2);
-                                direction.z *= randomRange(&seed, 1.0, 1.2);
+                                // direction.x *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
+                                // direction.y *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
+                                // direction.z *= randomRange(&seed, 1.0, 1.0 + material.properties[0]);
                                 direction = normalize(direction);
                             }
                         }
@@ -187,8 +201,11 @@
                         // ============================================================
 
                         var color = vec3<f32>(0.0);
-                        if (hitScaped) {
-                            color = accumulatedColor / f32(samplesPerPixel) / f32(lastBounce + 1u);
+                        if (reachedLight) {
+                            let colorIntensity = materialLightIntensity / f32(lastBounce + 1u);
+                            color = rayColor / f32(samplesPerPixel) * colorIntensity;
+                        } else if (bounceWentToSky) {
+                            color = rayColor / f32(samplesPerPixel) / f32(lastBounce + 1u);
                         }
 
                         textureStore(
