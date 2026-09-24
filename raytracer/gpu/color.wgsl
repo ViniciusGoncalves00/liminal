@@ -39,3 +39,15 @@ fn rgbToHsv(rgb: vec3<f32>) -> vec3<f32> {
 
     return vec3<f32>(h, s, v);
 }
+
+fn linearSpaceToGammaSpace(value: f32) -> f32 {
+    if (value <= 0.0031308) {
+        return 12.92 * value;
+    }
+
+    return 1.055 * pow(value, 1.0 / 2.4) - 0.055;
+}
+
+fn linearSpaceToGammaSpaceColor(color: vec3<f32>) -> vec3<f32> {
+    return vec3<f32>(linearSpaceToGammaSpace(color.r), linearSpaceToGammaSpace(color.g), linearSpaceToGammaSpace(color.b));
+}
