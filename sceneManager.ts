@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { RayTracingRenderer } from './ray-tracing-renderer';
 import { RayTracerRenderer } from './raytracer/ray-tracer-renderer';
 
@@ -129,6 +130,8 @@ export class SceneManager {
             this.gameCamera,
             this.gameView
         );
+
+        new TransformControls(this.editorCamera, this.editorRenderer.domElement);
 
         this.createHelpers();
 

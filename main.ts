@@ -8,14 +8,13 @@ const gameView = document.getElementById('game-view') as HTMLCanvasElement;
 
 const sceneManager = new SceneManager(editorView, gameView);
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial( { color: 0xff0000, roughness: 0.5, metalness: 0.5 } ));
-
+const cube = new THREE.Mesh( new THREE.BoxGeometry( 2, 2.0, 2 ), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ));
+cube.position.set(0, 1.43, 0.0);
+cube.rotateY(Math.PI / 6);
 sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
-const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xddaa22, roughness: 0.0, metalness: 0.5 } ) );
+const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.2, metalness: 0.5 } ) );
 floor.position.set(0, -2.5, 0);
 
 sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
@@ -25,26 +24,26 @@ ceiling.position.set(0, 2.5, 0);
 
 sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
 
-const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.0, metalness: 0.5 } ) );
+const right = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xff0000, roughness: 0.5, metalness: 0.5 } ) );
 right.position.set(2.5, 0, 0);
 right.rotateZ(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
 
-const left = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ) );
+const left = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0x00ff00, roughness: 0.02, metalness: 0.5 } ) );
 left.position.set(-2.5, 0, 0);
 left.rotateZ(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
 
-const back = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 1.0, metalness: 0.5 } ) );
+const back = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0x111111, roughness: 1.0, metalness: 0.5 } ) );
 back.position.set(0, 0, -2.5);
 back.rotateX(THREE.MathUtils.degToRad(90));
 
 sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
 
-// const plafon = new THREE.Mesh( new THREE.BoxGeometry( 1, 0.1, 1 ), new THREE.MeshStandardMaterial( { color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2 } ) );
-// plafon.position.set(0, 2.0, 0);
+// const plafon = new THREE.Mesh( new THREE.BoxGeometry( 2, 0.01, 2 ), new THREE.MeshStandardMaterial( { color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 10 } ) );
+// plafon.position.set(0, 2.4, 0);
 // sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
 
 // const front = new THREE.Mesh( new THREE.BoxGeometry( 5, 0.1, 5 ), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ) );
@@ -53,10 +52,18 @@ sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
 
 // sceneManager.addObject(front, SceneLayer.Game, SceneLayer.Editor);
 
-
-const loop = () => {
+let lastTime = 0;
+const loop = (time: number) => {
     requestAnimationFrame(loop);
     sceneManager.animate();
+
+    const t = time * 0.001;
+    const deltaTime = (time - lastTime) * 0.001;
+    lastTime = time;
+    cube.position.y = Math.sin(t) + 0.43;
+    // cube.position.x = Math.cos(t);
+    // cube.position.z = Math.sin(t);
+    cube.rotation.y += deltaTime;
 }
 
-loop();
+loop(0);

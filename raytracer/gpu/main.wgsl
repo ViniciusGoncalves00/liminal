@@ -43,7 +43,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
 
     const samplesPerPixel = 16u;
 
-    var bounces = 16u;
+    var bounces = 8u;
     var lastBounce = 0u;
     var bounceWentToSky = false;
     var reachedLight = false;
@@ -118,30 +118,31 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
                     rayColor *= lightIntensity;
                     break;
                 } else {
-                    rayColor += material.baseColor.rgb;
+                    rayColor += material.baseColor.rgb / (f32(bounce) + 1.0) * rgbToHsv(material.baseColor.rgb)[2];
                 }
 
                 origin = intersection.point + intersection.normal * 0.01;
                 var randomDirection = randomHemisphere(intersection.normal, &seed);
+                var randomLambertianDirection = normalize(intersection.normal + randomDirection);
                 var reflectedDirection = reflect(direction, intersection.normal);
                 var materialRoughness = material.properties[0];
-                direction = normalize(mix(reflectedDirection, randomDirection, materialRoughness));
+                direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));
             }
         }
         rayColor /= (f32(lastBounce) + 1.0);
         pixelColor += rayColor;
     }
 
-    // if (reachedLight) {
-    //     let colorIntensity = materialLightIntensity / f32(lastBounce + 1u);
-    //     pixelColor = pixelColor / f32(samplesPerPixel) * colorIntensity;
-    // } else if (bounceWentToSky) {
-    //     pixelColor = pixelColor / f32(samplesPerPixel);
-    // } else {
-    //     pixelColor = vec3<f32>();
-    // }
+    if (reachedLight) {
+        let colorIntensity = materialLightIntensity / f32(lastBounce + 1u);
+        pixelColor = pixelColor / f32(samplesPerPixel) * colorIntensity;
+    } else if (bounceWentToSky) {
+        pixelColor = pixelColor / f32(samplesPerPixel);
+    } else {
+        pixelColor = vec3<f32>();
+    }
 
-    pixelColor /= f32(samplesPerPixel);
+    // pixelColor /= f32(samplesPerPixel);
 
     textureStore(
         outputTexture,
