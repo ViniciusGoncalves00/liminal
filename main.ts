@@ -8,10 +8,14 @@ const gameView = document.getElementById('game-view') as HTMLCanvasElement;
 
 const sceneManager = new SceneManager(editorView, gameView);
 
-const cube = new THREE.Mesh( new THREE.BoxGeometry( 2, 2.0, 2 ), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.5, metalness: 0.5 } ));
-cube.position.set(0, 1.43, 0.0);
+const cube = new THREE.Mesh( new THREE.BoxGeometry(2.0, 2.0, 2.0), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.8, metalness: 0.5 } ));
+cube.position.set(0.0 , 1.43, 0.0);
 cube.rotateY(Math.PI / 6);
 sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
+
+const cube2 = new THREE.Mesh( new THREE.BoxGeometry(2.0, 0.5, 2.0), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.0, metalness: 0.5 } ));
+cube2.position.set(0.0, -1.9, 0.0);
+sceneManager.addObject(cube2, SceneLayer.Game, SceneLayer.Editor);
 
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
 const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.2, metalness: 0.5 } ) );
