@@ -16,7 +16,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
-    const samplesPerPixel = 8u;
+    const samplesPerPixel = 16u;
     var materialLightSourceIntensity = 0.0;
 
     var pixelColor = vec3<f32>(0.0);
@@ -31,9 +31,11 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         var randomX = random(&seed);
         var randomY = random(&seed);
 
+        var MAX_BOUNCES = 8u;
         if (sample == 0u) {
             randomX = 0.5;
             randomY = 0.5;
+            MAX_BOUNCES = u32(f32(MAX_BOUNCES) / 2.0);
         }
 
         let pixel = vec2<f32>(
@@ -62,12 +64,13 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             uv.y * camera.up.xyz
         );
         
-        var throughput = vec3<f32>(1.0);
         var rayColor = vec3<f32>(0.0);
-
-        const MAX_BOUNCES = 8u;
+        
+        var lastBounce = 0u;
+        var lightStrength = 0.0;
 
         for (var bounce = 0u; bounce < MAX_BOUNCES; bounce++) {
+            lastBounce = bounce;
             let intersection = closestIntersection(origin, direction);
 
             let hittedNothing = intersection.distance >= 1e30;
@@ -75,12 +78,12 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             if (hittedNothing) {
                 let intensity = abs(direction.y);
 
-                let darkBlue = vec3<f32>(0.02, 0.05, 0.15);
+                let darkBlue = vec3<f32>(0.10, 0.25, 0.50);
                 let lightBlue = vec3<f32>(0.25, 0.55, 0.85);
 
                 let skyColor = mix(lightBlue, darkBlue, intensity);
-                rayColor += throughput * skyColor;
-
+                rayColor += skyColor / (f32(bounce) + 1.0);
+                lightStrength = rgbToHsv(skyColor)[2];
                 break;
             }
 
@@ -90,12 +93,12 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             let hittedLightSource = lightSourceIntensity > 1.0;
 
             if (hittedLightSource) {
-                rayColor += throughput * material.baseColor.rgb * lightSourceIntensity;
-
+                rayColor += material.baseColor.rgb * lightSourceIntensity;
+                lightStrength = lightSourceIntensity;
                 break;
             }
 
-            throughput *= material.baseColor.rgb;
+            rayColor += material.baseColor.rgb / (f32(bounce) + 1.0) * rgbToHsv(material.baseColor.rgb)[2];
 
             origin = intersection.point + intersection.normal * 0.01;
 
@@ -107,7 +110,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));
         }
 
-        pixelColor += rayColor;
+        pixelColor += rayColor * lightStrength / f32(lastBounce + 1u);
     }
 
     pixelColor = pixelColor / f32(samplesPerPixel);
