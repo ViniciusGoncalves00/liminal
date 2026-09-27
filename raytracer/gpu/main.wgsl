@@ -35,7 +35,6 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         if (sample == 0u) {
             randomX = 0.5;
             randomY = 0.5;
-            MAX_BOUNCES = u32(f32(MAX_BOUNCES) / 2.0);
         }
 
         let pixel = vec2<f32>(
@@ -90,7 +89,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             let material = materials[intersection.materialId];
 
             let lightSourceIntensity = material.properties[2];
-            let hittedLightSource = lightSourceIntensity > 1.0;
+            let hittedLightSource = lightSourceIntensity > 0.0;
 
             if (hittedLightSource) {
                 rayColor += material.baseColor.rgb * lightSourceIntensity;
