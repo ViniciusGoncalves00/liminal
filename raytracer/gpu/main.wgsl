@@ -62,27 +62,13 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             uv.y * camera.up.xyz
         );
         
-        var lightStrength = 1.0;
-        var rayColor = vec3<f32>();
+        var throughput = vec3<f32>(1.0);
+        var rayColor = vec3<f32>(0.0);
 
-        const MAX_RAYS_EMMISIONS = 8u;
-        var raysEmitted = 0u;
-        var raySegmentsColor: array<vec3<f32>, MAX_RAYS_EMMISIONS>;
+        const MAX_BOUNCES = 8u;
 
-        while (raysEmitted <= MAX_RAYS_EMMISIONS) {
-            raysEmitted++;
-
+        for (var bounce = 0u; bounce < MAX_BOUNCES; bounce++) {
             let intersection = closestIntersection(origin, direction);
-
-            let material = materials[intersection.materialId];
-            let lightSourceIntensity = material.properties[2];
-            let hittedLightSource = lightSourceIntensity > 1.0;
-
-            if (hittedLightSource) {
-                materialLightSourceIntensity = lightSourceIntensity;
-                raySegmentsColor[raysEmitted] = material.baseColor.rgb;
-                lightStrength = materialLightSourceIntensity;
-            }
 
             let hittedNothing = intersection.distance >= 1e30;
 
@@ -92,33 +78,36 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
                 let darkBlue = vec3<f32>(0.02, 0.05, 0.15);
                 let lightBlue = vec3<f32>(0.25, 0.55, 0.85);
 
-                raySegmentsColor[raysEmitted] = mix(lightBlue, darkBlue, intensity);
-                lightStrength = 1.0;
+                let skyColor = mix(lightBlue, darkBlue, intensity);
+                rayColor += throughput * skyColor;
+
+                break;
             }
 
-            if (!hittedLightSource && !hittedNothing) {
-                raySegmentsColor[raysEmitted] = material.baseColor.rgb;
+            let material = materials[intersection.materialId];
 
-                origin = intersection.point + intersection.normal * 0.01;
-                var randomDirection = randomHemisphere(intersection.normal, &seed);
-                var randomLambertianDirection = normalize(intersection.normal + randomDirection);
-                var reflectedDirection = reflect(direction, intersection.normal);
-                var materialRoughness = material.properties[0];
-                direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));
+            let lightSourceIntensity = material.properties[2];
+            let hittedLightSource = lightSourceIntensity > 1.0;
+
+            if (hittedLightSource) {
+                rayColor += throughput * material.baseColor.rgb * lightSourceIntensity;
+
+                break;
             }
+
+            throughput *= material.baseColor.rgb;
+
+            origin = intersection.point + intersection.normal * 0.01;
+
+            let randomDirection = randomHemisphere(intersection.normal, &seed);
+            let randomLambertianDirection = normalize(intersection.normal + randomDirection);
+            let reflectedDirection = reflect(direction, intersection.normal);
+            let materialRoughness = material.properties[0];
+
+            direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));
         }
 
-        for (var i = 1u; i <= raysEmitted; i++) {
-            // let bouncesDistanceFromLight = f32(raysEmitted - i);
-            // let weight = pow(0.5, bouncesDistanceFromLight);
-
-            // rayColor += raySegmentsColor[i] * weight * lightStrength;
-
-            rayColor += raySegmentsColor[i] * 1.0 / f32(i);
-            // rayColor += raySegmentsColor[i];
-        }
-
-        pixelColor += rayColor / f32(raysEmitted) * 2.0;
+        pixelColor += rayColor;
     }
 
     pixelColor = pixelColor / f32(samplesPerPixel);
