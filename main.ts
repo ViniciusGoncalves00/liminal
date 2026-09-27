@@ -11,14 +11,18 @@ const sceneManager = new SceneManager(editorView, gameView);
 const cube = new THREE.Mesh( new THREE.BoxGeometry(2.0, 2.0, 2.0), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.8, metalness: 0.5 } ));
 cube.position.set(0.0 , 1.43, 0.0);
 cube.rotateY(Math.PI / 6);
-sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
+// sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
-const cube2 = new THREE.Mesh( new THREE.BoxGeometry(2.0, 0.5, 2.0), new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.0, metalness: 0.5 } ));
-cube2.position.set(0.0, -1.9, 0.0);
+const cube2 = new THREE.Mesh( new THREE.BoxGeometry(4.8, 1.0, 1.0), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.8, metalness: 0.5 } ));
+cube2.position.set(0.0, 1.0, 0.0);
 sceneManager.addObject(cube2, SceneLayer.Game, SceneLayer.Editor);
 
+const cube3 = new THREE.Mesh( new THREE.BoxGeometry(2.0, 2.0, 2.0), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.05, metalness: 0.5 } ));
+cube3.position.set(0.0, -1.0, 0.0);
+sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
+
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
-const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.2, metalness: 0.5 } ) );
+const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.8, metalness: 0.5 } ) );
 floor.position.set(0, -2.5, 0);
 
 sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);

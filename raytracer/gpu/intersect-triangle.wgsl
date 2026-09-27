@@ -38,3 +38,7 @@ fn intersectTriangle(origin: vec3<f32>, direction: vec3<f32>, triangle: Triangle
             
     return t;
 }
+
+fn intersectPlane() -> vec3<f32> {
+    return vec3<f32>();
+}
