@@ -102,7 +102,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
             origin = intersection.point + intersection.normal * 0.01;
 
             let randomDirection = randomHemisphere(intersection.normal, &seed);
-            let randomLambertianDirection = normalize(intersection.normal + randomDirection);
+            let randomLambertianDirection = intersection.normal + randomDirection;
             let reflectedDirection = reflect(direction, intersection.normal);
             let materialRoughness = material.properties[0];
 
@@ -143,7 +143,7 @@ fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection 
 
         var triangleNormal = vec3<f32>(0.0);
 
-        let currentDistance = intersectTriangle(
+        let currentDistance = intersectRayTriangle(
             origin,
             direction,
             triangle,
