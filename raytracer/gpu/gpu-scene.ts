@@ -71,26 +71,9 @@ export class GPUScene {
 
             for (let i = 0; i < index.count; i += 3) {
 
-                this.a
-                    .fromBufferAttribute(
-                        positions,
-                        index.getX(i)
-                    )
-                    .applyMatrix4(world);
-
-                this.b
-                    .fromBufferAttribute(
-                        positions,
-                        index.getX(i + 1)
-                    )
-                    .applyMatrix4(world);
-
-                this.c
-                    .fromBufferAttribute(
-                        positions,
-                        index.getX(i + 2)
-                    )
-                    .applyMatrix4(world);
+                this.a.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
+                this.b.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
+                this.c.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
 
                 this.pushTriangle(materialId);
             }
@@ -99,26 +82,9 @@ export class GPUScene {
 
             for (let i = 0; i < positions.count; i += 3) {
 
-                this.a
-                    .fromBufferAttribute(
-                        positions,
-                        i
-                    )
-                    .applyMatrix4(world);
-
-                this.b
-                    .fromBufferAttribute(
-                        positions,
-                        i + 1
-                    )
-                    .applyMatrix4(world);
-
-                this.c
-                    .fromBufferAttribute(
-                        positions,
-                        i + 2
-                    )
-                    .applyMatrix4(world);
+                this.a.fromBufferAttribute(positions, i).applyMatrix4(world);
+                this.b.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
+                this.c.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
 
                 this.pushTriangle(materialId);
             }

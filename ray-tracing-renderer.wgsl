@@ -77,7 +77,7 @@ fn randomDirection(seed : vec2<u32>) -> vec3<f32>{
 // TRIANGLE INTERSECTION
 // ============================================================================
 
-fn intersectTriangle(ray : Ray, tri : Triangle) -> HitData{
+fn intersectRayTriangle(ray : Ray, tri : Triangle) -> HitData{
 
     var hit : HitData;
 
@@ -146,7 +146,7 @@ fn worldHit(ray : Ray) -> HitData{
 
     for(var i=0u;i<triangleCount;i++){
 
-        let hit = intersectTriangle(ray,triangles[i]);
+        let hit = intersectRayTriangle(ray,triangles[i]);
 
         if(hit.hit && hit.t < closest.t){
 
