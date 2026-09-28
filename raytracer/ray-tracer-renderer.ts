@@ -52,7 +52,7 @@ export class RayTracerRenderer {
         this.gpuScene?.update(scene);
         
         this.computeRayTracer?.render(this.gpuCamera!, this.gpuScene!);
-        this.presentPass?.render(this.computeRayTracer?.outputTexture!);
+        this.presentPass?.render(this.computeRayTracer?.postProcessTexture!);
         
         this.accumulationPass?.nextFrame();
     }
