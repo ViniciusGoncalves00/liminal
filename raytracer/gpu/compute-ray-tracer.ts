@@ -194,38 +194,38 @@ export class ComputeRayTracer {
                             return;
                         }
                         
-                        var color = textureLoad(inputTexture, vec2<i32>(id.xy), 0);
-                        var colorHsv = rgbToHsv(vec3<f32>(color.rgb));
-                        var value = colorHsv[2];
+                        // var color = textureLoad(inputTexture, vec2<i32>(id.xy), 0);
+                        // var colorHsv = rgbToHsv(vec3<f32>(color.rgb));
+                        // var value = colorHsv[2];
                         
-                        if (value < 0.2 || value > 0.8) {
-                            for (var x = -1i; x <= 1i; x++) {
-                                for (var y = -1i; y <= 1i; y++) {
-                                    let p = vec2<i32>(id.xy) + vec2<i32>(x, y);
-                                    let clamped = clamp(
-                                        p,
-                                        vec2<i32>(0),
-                                        vec2<i32>(size) - 1
-                                    );
+                        // if (value < 0.2 || value > 0.8) {
+                        //     for (var x = -1i; x <= 1i; x++) {
+                        //         for (var y = -1i; y <= 1i; y++) {
+                        //             let p = vec2<i32>(id.xy) + vec2<i32>(x, y);
+                        //             let clamped = clamp(
+                        //                 p,
+                        //                 vec2<i32>(0),
+                        //                 vec2<i32>(size) - 1
+                        //             );
 
-                                    color += textureLoad(inputTexture, clamped, 0);
-                                }
-                            }
+                        //             color += textureLoad(inputTexture, clamped, 0);
+                        //         }
+                        //     }
 
-                            color /= 9.0;
-                        }
+                        //     color /= 9.0;
+                        // }
 
-                        textureStore(
-                            outputTexture,
-                            vec2<i32>(id.xy),
-                            color
-                        );
-                                
                         // textureStore(
                         //     outputTexture,
                         //     vec2<i32>(id.xy),
-                        //     textureLoad(inputTexture, vec2<i32>(id.xy), 0)
+                        //     color
                         // );
+                                
+                        textureStore(
+                            outputTexture,
+                            vec2<i32>(id.xy),
+                            textureLoad(inputTexture, vec2<i32>(id.xy), 0)
+                        );
                     }
                 `
             });
