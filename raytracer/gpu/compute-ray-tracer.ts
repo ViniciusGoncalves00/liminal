@@ -143,6 +143,17 @@ export class ComputeRayTracer {
                         buffer: {
                             type: "uniform"
                         }
+                    },
+
+                    {
+                        binding: 5,
+
+                        visibility:
+                            GPUShaderStage.COMPUTE,
+
+                        buffer: {
+                            type: "read-only-storage"
+                        }
                     }
                 ]
             });
@@ -334,6 +345,13 @@ export class ComputeRayTracer {
                         resource: {
                             buffer:
                                 this.timeBuffer
+                        }
+                    },
+
+                    {
+                        binding: 5,
+                        resource: {
+                            buffer: gpuScene.bvhBuffer
                         }
                     }
                 ]

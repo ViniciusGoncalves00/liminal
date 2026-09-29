@@ -3,13 +3,13 @@
 @group(0) @binding(2) var<storage, read> materials : array<Material>;
 @group(0) @binding(3) var outputTexture : texture_storage_2d<rgba16float, write>;
 @group(0) @binding(4) var<uniform> time: Time;
+@group(0) @binding(5) var<storage, read> bvh : array<BVHNode>;
 
 struct BVHNode {
-
     min : vec4<f32>,
     max : vec4<f32>,
-
     data : vec4<u32>,
+    padding : vec4<u32>,
 };
 
 @compute @workgroup_size(8, 8)
@@ -137,6 +137,46 @@ struct Intersection {
     materialId: u32,
 };
 
+// fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection {
+//     var closestDistance = 1e30;
+//     var hitMaterialId = 0u;
+//     var hitNormal = vec3<f32>(0.0);
+
+//     var hitTriangle: Triangle;
+
+//     let triangleCount = arrayLength(&triangles);
+
+//     for (var i = 0u; i < triangleCount; i++) {
+//         let triangle = triangles[i];
+
+//         var triangleNormal = vec3<f32>(0.0);
+
+//         let currentDistance = intersectRayTriangle(
+//             origin,
+//             direction,
+//             triangle,
+//             &triangleNormal
+//         );
+
+//         if (currentDistance > 0.0 && currentDistance < closestDistance) {
+//             closestDistance = currentDistance;
+//             hitMaterialId = triangle.materialId;
+//             hitNormal = triangleNormal;
+//             hitTriangle = triangle;
+//         }
+//     }
+
+//     let point = origin + direction * closestDistance;
+
+//     // if distance is still -1.0, it means we didn't hit anything, so we can return a default intersection
+//     return Intersection(
+//         point,
+//         closestDistance,
+//         hitNormal,
+//         hitMaterialId
+//     );
+// }
+
 fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection {
     var closestDistance = 1e30;
     var hitMaterialId = 0u;
@@ -146,8 +186,35 @@ fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection 
 
     let triangleCount = arrayLength(&triangles);
 
-    for (var i = 0u; i < triangleCount; i++) {
-        let triangle = triangles[i];
+    var stack : array<u32, 64>;
+    var stackSize = 0u;
+    
+    stack[stackSize] = 0u;
+    stackSize++;
+    
+    while (stackSize > 0u) {
+    
+        stackSize--;
+    
+        let nodeIndex = stack[stackSize];
+    
+        let node = bvh[nodeIndex];
+    
+        if (!rayIntersectionsWithAABBChat(origin, direction, node.min.xyz, node.max.xyz)) {
+            continue;
+        }
+    
+        if (node.data.w > 0u) {
+            for (
+        var i = 0u;
+        i < node.data.w;
+        i++
+    ) {
+
+        let triangle =
+            triangles[
+                node.data.z + i
+            ];
 
         var triangleNormal = vec3<f32>(0.0);
 
@@ -158,11 +225,30 @@ fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection 
             &triangleNormal
         );
 
-        if (currentDistance > 0.0 && currentDistance < closestDistance) {
+        if (
+            currentDistance > 0.0 &&
+            currentDistance < closestDistance
+        ) {
             closestDistance = currentDistance;
             hitMaterialId = triangle.materialId;
             hitNormal = triangleNormal;
             hitTriangle = triangle;
+        }
+    }
+    
+        } else {
+        
+            // internal node
+    
+            stack[stackSize] =
+                node.data.x;
+    
+            stackSize++;
+    
+            stack[stackSize] =
+                node.data.y;
+    
+            stackSize++;
         }
     }
 
@@ -175,4 +261,32 @@ fn closestIntersection(origin: vec3<f32>, direction: vec3<f32>) -> Intersection 
         hitNormal,
         hitMaterialId
     );
+}
+
+fn rayIntersectionsWithAABBChat(
+    origin: vec3<f32>,
+    direction: vec3<f32>,
+    minBounds: vec3<f32>,
+    maxBounds: vec3<f32>
+) -> bool {
+
+    let invDirection = 1.0 / direction;
+
+    let t0 = (minBounds - origin) * invDirection;
+    let t1 = (maxBounds - origin) * invDirection;
+
+    let tMin = min(t0, t1);
+    let tMax = max(t0, t1);
+
+    let near = max(
+        max(tMin.x, tMin.y),
+        tMin.z
+    );
+
+    let far = min(
+        min(tMax.x, tMax.y),
+        tMax.z
+    );
+
+    return far >= max(near, 0.0);
 }
