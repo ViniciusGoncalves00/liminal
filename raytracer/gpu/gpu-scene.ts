@@ -1,17 +1,20 @@
 import * as THREE from "three";
 import { GPUTriangle } from "./gpu-triangle";
+import { BVHNode } from "./BVHNode";
+import { BVHBuilder } from "./BVHBuilder";
 
 export class GPUScene {
     private readonly device: GPUDevice;
 
     public triangleBuffer!: GPUBuffer;
     public materialBuffer!: GPUBuffer;
+    public bvhBuffer!: GPUBuffer;
+    private bvhData: BVHNode[] = [];
 
     private readonly triangleData: GPUTriangle[] = [];
     private readonly materialData: Float32Array[] = [];
 
-    private readonly materialMap =
-        new Map<THREE.Material, number>();
+    private readonly materialMap = new Map<THREE.Material, number>();
 
     private readonly a = new THREE.Vector3();
     private readonly b = new THREE.Vector3();
@@ -22,18 +25,28 @@ export class GPUScene {
     }
 
     public update(scene: THREE.Scene): void {
-        this.triangleData.length = 0;
-        this.materialData.length = 0;
-        this.materialMap.clear();
+            this.triangleData.length = 0;
+    this.materialData.length = 0;
+    this.bvhData.length = 0;
 
-        scene.updateMatrixWorld(true);
+    this.materialMap.clear();
 
-        scene.traverse(object => {
-            if (!(object instanceof THREE.Mesh))
+    scene.updateMatrixWorld(true);
+
+    scene.traverse(object => {
+        if (!(object instanceof THREE.Mesh))
                 return;
 
             this.addMesh(object);
         });
+
+        const builder = new BVHBuilder();
+        const result = builder.build(this.triangleData);
+
+        this.bvhData = result.nodes;
+
+        this.triangleData.length = 0;
+        this.triangleData.push(...result.triangles);
 
         this.uploadBuffers();
     }
@@ -276,5 +289,64 @@ export class GPUScene {
             0,
             materialArrayBuffer
         );
+
+        const bvhCount =
+            this.bvhData.length;
+
+        const bvhBufferSize =
+            Math.max(
+                bvhCount,
+                1
+            ) * BVHNode.BYTE_SIZE;
+        
+        const bvhArrayBuffer =
+            new ArrayBuffer(
+                bvhBufferSize
+            );
+        
+        for (
+            let i = 0;
+            i < bvhCount;
+            i++
+        ) {
+        
+            this.bvhData[i].write(
+                bvhArrayBuffer,
+                i * BVHNode.BYTE_SIZE
+            );
+        }
+
+        if (
+            !this.bvhBuffer ||
+            this.bvhBuffer.size < bvhBufferSize
+        ) {
+        
+            this.bvhBuffer?.destroy();
+        
+            this.bvhBuffer =
+                this.device.createBuffer({
+                    size: bvhBufferSize,
+                
+                    usage:
+                        GPUBufferUsage.STORAGE |
+                        GPUBufferUsage.COPY_DST
+                });
+        }
+
+        this.device.queue.writeBuffer(
+            this.bvhBuffer,
+            0,
+            bvhArrayBuffer
+        );
+
+        console.log(
+    "Triangles:",
+    this.triangleData.length
+);
+
+console.log(
+    "BVH nodes:",
+    this.bvhData.length
+);
     }
 }

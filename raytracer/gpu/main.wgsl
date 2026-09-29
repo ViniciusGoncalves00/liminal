@@ -4,6 +4,14 @@
 @group(0) @binding(3) var outputTexture : texture_storage_2d<rgba16float, write>;
 @group(0) @binding(4) var<uniform> time: Time;
 
+struct BVHNode {
+
+    min : vec4<f32>,
+    max : vec4<f32>,
+
+    data : vec4<u32>,
+};
+
 @compute @workgroup_size(8, 8)
 fn main( @builtin(global_invocation_id) id : vec3<u32>) {
     let textureSize = textureDimensions(outputTexture);

@@ -1,15 +1,21 @@
 import * as THREE from "three";
 import { BVHNode } from "./BVHNode";
 import type { GPUTriangle } from "./gpu-triangle";
+import type { BVHBuildResult } from "./BVHResult";
 
 export class BVHBuilder {
-    public build(triangles: GPUTriangle[]): BVHNode[] {
+    public build(triangles: GPUTriangle[]): BVHBuildResult {
         const nodes: BVHNode[] = []
         const indices = triangles.map((_, i) => i);
 
         this.buildNode(triangles, indices, 0, indices.length, nodes);
 
-        return nodes;
+        const reorderedTriangles = indices.map(index => triangles[index]);
+
+        return {
+            nodes,
+            triangles: reorderedTriangles
+        };
     }
 
     private buildNode(triangles: GPUTriangle[], indices: number[], start: number, end: number, nodes: BVHNode[]): number {
@@ -30,6 +36,9 @@ export class BVHBuilder {
             box.expandByPoint(triangle.p2);
             // this.expandBounds(node, triangle);
         }
+
+        node.min.copy(box.min);
+        node.max.copy(box.max);
 
         const count = end - start;
 
