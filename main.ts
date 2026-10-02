@@ -19,10 +19,10 @@ sceneManager.addObject(cube2, SceneLayer.Game, SceneLayer.Editor);
 
 const cube3 = new THREE.Mesh( new THREE.BoxGeometry(4.8, 1.0, 1.0), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.98, metalness: 0.5, emissiveIntensity: 0.0 } ));
 cube3.position.set(0.0, -1.0, 0.0);
-sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
+// sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
 
-const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 6, 6), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.0, metalness: 0.5, emissiveIntensity: 0.0 } ));
-// sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
+const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 128, 128), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.5, emissiveIntensity: 0.0 } ));
+sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
 
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
 const floor = new THREE.Mesh( baseGeometry, new THREE.MeshStandardMaterial( { color: 0xeeeeee, roughness: 0.8, metalness: 0.5, emissiveIntensity: 0.0 } ) );
@@ -70,12 +70,13 @@ const loop = (time: number) => {
     sceneManager.animate();
 
     const t = time * 0.001;
-    const deltaTime = (time - lastTime) * 0.001;
+    const deltaTime = (time - lastTime) * 0.0001;
     lastTime = time;
-    cube3.position.y = Math.sin(t) - 0.95;
+    // cube3.position.y = Math.sin(t) - 0.95;
+    // sphere.position.y = Math.sin(t) * 0.5 - 0.5;
     // cube.position.x = Math.cos(t);
     // cube.position.z = Math.sin(t);
-    cube2.rotation.y += deltaTime;
+    // sphere.rotation.y += deltaTime;
 }
 
 loop(0);

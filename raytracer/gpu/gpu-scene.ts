@@ -25,20 +25,21 @@ export class GPUScene {
     }
 
     public update(scene: THREE.Scene): void {
-            this.triangleData.length = 0;
-    this.materialData.length = 0;
-    this.bvhData.length = 0;
+        this.triangleData.length = 0;
+        this.materialData.length = 0;
+        this.bvhData.length = 0;
 
-    this.materialMap.clear();
+        this.materialMap.clear();
 
-    scene.updateMatrixWorld(true);
+        scene.updateMatrixWorld(true);
 
-    scene.traverse(object => {
-        if (!(object instanceof THREE.Mesh))
-                return;
+        scene.traverse(object => {
+            if (!(object instanceof THREE.Mesh))
+                    return;
 
-            this.addMesh(object);
-        });
+                this.addMesh(object);
+            }
+        );
 
         const builder = new BVHBuilder();
         const result = builder.build(this.triangleData);
@@ -102,6 +103,16 @@ export class GPUScene {
                 this.pushTriangle(materialId);
             }
         }
+
+        console.log(
+            "Triangles:",
+            this.triangleData.length
+        );
+
+        console.log(
+            "BVH nodes:",
+            this.bvhData.length
+        );
     }
 
     private pushTriangle(materialId: number): void {
@@ -338,15 +349,5 @@ export class GPUScene {
             0,
             bvhArrayBuffer
         );
-
-        console.log(
-    "Triangles:",
-    this.triangleData.length
-);
-
-console.log(
-    "BVH nodes:",
-    this.bvhData.length
-);
     }
 }

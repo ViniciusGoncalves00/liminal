@@ -24,7 +24,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
-    const samplesPerPixel = 16u;
+    const samplesPerPixel = 8u;
     var materialLightSourceIntensity = 0.0;
 
     var pixelColor = vec3<f32>(0.0);
