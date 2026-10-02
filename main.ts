@@ -5,6 +5,7 @@ import { ObjectFactory } from "./objectFactory";
 
 const editorView = document.getElementById('editor-view') as HTMLCanvasElement;
 const gameView = document.getElementById('game-view') as HTMLCanvasElement;
+const fps = document.getElementById('fps') as HTMLDivElement;
 
 const sceneManager = new SceneManager(editorView, gameView);
 
@@ -21,7 +22,7 @@ const cube3 = new THREE.Mesh( new THREE.BoxGeometry(4.8, 1.0, 1.0), new THREE.Me
 cube3.position.set(0.0, -1.0, 0.0);
 // sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
 
-const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 128, 128), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.5, emissiveIntensity: 0.0 } ));
+const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 8, 8), new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.5, emissiveIntensity: 0.0 } ));
 sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
 
 const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
@@ -68,9 +69,10 @@ let lastTime = 0;
 const loop = (time: number) => {
     requestAnimationFrame(loop);
     sceneManager.animate();
+    fps.innerText = (1000 / (time - lastTime)).toFixed(0) + " FPS";
 
     const t = time * 0.001;
-    const deltaTime = (time - lastTime) * 0.0001;
+    const deltaTime = (time - lastTime) * 0.001;
     lastTime = time;
     // cube3.position.y = Math.sin(t) - 0.95;
     // sphere.position.y = Math.sin(t) * 0.5 - 0.5;
