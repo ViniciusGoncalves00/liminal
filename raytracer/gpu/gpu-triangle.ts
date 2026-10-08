@@ -30,10 +30,10 @@ export class GPUTriangle {
         this.materialId = materialId;
     }
 
-    public set(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, materialId: number): this {
-        this.p0.set(p0.x, p0.y, p0.z, 1);
-        this.p1.set(p1.x, p1.y, p1.z, 1);
-        this.p2.set(p2.x, p2.y, p2.z, 1);
+    public setFromPoints(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, materialId: number): this {
+        this.p0.set(p0.x, p0.y, p0.z, 0);
+        this.p1.set(p1.x, p1.y, p1.z, 0);
+        this.p2.set(p2.x, p2.y, p2.z, 0);
 
         this.materialId = materialId;
 

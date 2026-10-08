@@ -5,6 +5,7 @@ import collisionShader from "./collision.wgsl?raw";
 import colorConversorShader from "./color.wgsl?raw";
 import randomShader from "./random.wgsl?raw";
 import mainShader from "./main.wgsl?raw";
+import { GPUMaterial } from "./gpu-material";
 
 export class ComputeRayTracer {
 
@@ -61,11 +62,7 @@ export class ComputeRayTracer {
                 code: `
                     ${GPUCamera.SHADER}
                     ${GPUTriangle.SHADER}
-
-                    struct Material {
-                        baseColor : vec4<f32>,
-                        properties : vec4<f32>,
-                    };
+                    ${GPUMaterial.SHADER}
 
                     struct Time {
                         value: f32,

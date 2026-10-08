@@ -24,7 +24,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
-    const samplesPerPixel = 4u;
+    const samplesPerPixel = 8u;
     var materialLightSourceIntensity = 0.0;
 
     var pixelColor = vec3<f32>(0.0);
@@ -39,7 +39,7 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
         var randomX = random(&seed);
         var randomY = random(&seed);
 
-        var MAX_BOUNCES = 16u;
+        var MAX_BOUNCES = 8u;
         if (sample == 0u) {
             randomX = 0.5;
             randomY = 0.5;
@@ -107,9 +107,16 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
 
             rayColor += material.baseColor.rgb / (f32(bounce) + 1.0) * rgbToHsv(material.baseColor.rgb)[2];
 
-            origin = intersection.point + intersection.normal * 0.01;
-
             let frontFace = dot(direction, intersection.normal) < 0.0;
+            var usedNormal: vec3<f32>;
+            if (frontFace) {
+                usedNormal = intersection.normal;
+            } else {
+                usedNormal = -intersection.normal;
+            };
+
+            origin = intersection.point + usedNormal * 0.01;
+
             var refractionIndex = material.properties[1];
 
             if (refractionIndex > 0.0) {
@@ -119,22 +126,22 @@ fn main( @builtin(global_invocation_id) id : vec3<u32>) {
                     refractionIndex = refractionIndex;
                 }
 
-                let cosTheta = dot(-direction, intersection.normal);
+                let cosTheta = dot(-direction, usedNormal);
 
-                let outRayPerpendicular = refractionIndex * (direction +  cosTheta * intersection.normal);
+                let outRayPerpendicular = refractionIndex * (direction + cosTheta * usedNormal);
 
                 let cos2Theta = 1.0 - dot(outRayPerpendicular, outRayPerpendicular);
 
                 if (cos2Theta < 0.0) {
-                    direction = reflect(direction, intersection.normal);
+                    direction = reflect(direction, usedNormal);
                 } else {
-                    let outRayParallel = -sqrt(cos2Theta) * intersection.normal;
+                    let outRayParallel = -sqrt(cos2Theta) * usedNormal;
                     direction = outRayPerpendicular + outRayParallel;
                 }
             } else {
-                let randomDirection = randomHemisphere(intersection.normal, &seed);
-                let randomLambertianDirection = intersection.normal + randomDirection;
-                let reflectedDirection = reflect(direction, intersection.normal);
+                let randomDirection = randomHemisphere(usedNormal, &seed);
+                let randomLambertianDirection = usedNormal + randomDirection;
+                let reflectedDirection = reflect(direction, usedNormal);
                 let materialRoughness = material.properties[0];
 
                 direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));

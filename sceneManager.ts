@@ -7,7 +7,6 @@ import { RayTracerRenderer } from './raytracer/ray-tracer-renderer';
 export const SceneLayer = {
     Game: 0,
     Editor: 1,
-    GameOnly: 2,
 };
 
 export type SceneLayer = typeof SceneLayer[keyof typeof SceneLayer];
@@ -27,38 +26,24 @@ export class SceneManager {
     public readonly gameCamera: THREE.PerspectiveCamera;
 
     private readonly editorControls: OrbitControls;
+    private readonly gameControls: OrbitControls;
 
-    public constructor(
-        editorElement?: HTMLCanvasElement,
-        gameElement?: HTMLCanvasElement,
-        scene: THREE.Scene = new THREE.Scene()
-    ) {
+    public constructor(editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement, scene: THREE.Scene = new THREE.Scene()) {
         this.editorView = editorElement ?? this.createCanvas('editor-view');
         this.gameView = gameElement ?? this.createCanvas('game-view');
 
         this.scene = scene;
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.1));
 
         this.editorRenderer = new THREE.WebGLRenderer({
             canvas: this.editorView
         });
 
-        // this.gameRenderer = new THREE.WebGLRenderer({
-        //     canvas: this.gameView
-        // });
-
-        // const xRays = 192;
-        // const yRays = 108;
-        const xRays = 19;
-        const yRays = 11;
-
-        // this.gameRayTracingRenderer = new RayTracingRenderer({
-        //     canvas: this.gameView,
-        //     xRays: xRays,
-        //     yRays: yRays
-        // });
-
         this.gameRayTracerRenderer = new RayTracerRenderer();
         this.gameRayTracerRenderer.init(this.gameView);
+
+        const xRays = 19;
+        const yRays = 11;
 
         this.resize();
 
@@ -68,19 +53,11 @@ export class SceneManager {
         this.scene.add(this.gameCamera);
         this.scene.add(this.editorCamera);
 
-        //
-        // Configure visible layers
-        //
-
-        // Game camera
         this.gameCamera.layers.enable(SceneLayer.Game);
         this.gameCamera.layers.disable(SceneLayer.Editor);
-        this.gameCamera.layers.disable(SceneLayer.GameOnly);
 
-        // Editor camera
         this.editorCamera.layers.enable(SceneLayer.Game);
         this.editorCamera.layers.enable(SceneLayer.Editor);
-        this.editorCamera.layers.enable(SceneLayer.GameOnly);
 
         const points: THREE.Vector3[] = [];
 
@@ -125,8 +102,8 @@ export class SceneManager {
             this.editorCamera,
             this.editorRenderer.domElement
         );
-
-        new OrbitControls(
+        
+        this.gameControls = new OrbitControls(
             this.gameCamera,
             this.gameView
         );
@@ -138,12 +115,11 @@ export class SceneManager {
         window.addEventListener('resize', () => this.resize());
     }
 
-    public animate(): void {
-        this.editorControls.update();
+    public animate(deltaTime: number): void {
+        this.editorControls.update(deltaTime);
+        this.gameControls.update(deltaTime);
 
         this.editorRenderer.render(this.scene, this.editorCamera);
-        // this.gameRenderer.render(this.scene, this.gameCamera);
-        // this.gameRayTracingRenderer.render(this.scene, this.gameCamera);
         this.gameRayTracerRenderer.render(this.scene, this.gameCamera);
     }
 
@@ -151,21 +127,17 @@ export class SceneManager {
      * Adds an object to the scene.
      * By default it is visible in both editor and game.
      */
-    public addObject(
-        object: THREE.Object3D,
-        ...layers: SceneLayer[]
-    ): void {
-
+    public addObject(object: THREE.Object3D, ...layers: SceneLayer[]): void {
         object.layers.disableAll();
 
         if (layers.length === 0) {
             object.layers.enable(SceneLayer.Game);
+            object.layers.enable(SceneLayer.Editor);
         } else {
             layers.forEach(layer => object.layers.enable(layer));
         }
 
         this.scene.add(object);
-        // this.gameRayTracingRenderer.hittableCollection.addObject(this.scene);
         this.gameRayTracerRenderer.gpuScene?.update(this.scene);
     }
 

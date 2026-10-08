@@ -63,17 +63,12 @@ export class GPUScene {
         if (!positions)
             return;
 
-        /*
-         * Por enquanto suportamos apenas um material
-         * por Mesh.
-         */
         if (Array.isArray(mesh.material))
             throw new Error(
                 "Multiple materials are not supported yet."
             );
 
-        const material =
-            mesh.material as THREE.MeshStandardMaterial;
+        const material = mesh.material as THREE.MeshPhysicalMaterial;
 
         const materialId =
             this.addMaterial(material);
@@ -82,9 +77,7 @@ export class GPUScene {
         const world = mesh.matrixWorld;
 
         if (index) {
-
             for (let i = 0; i < index.count; i += 3) {
-
                 this.a.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
                 this.b.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
                 this.c.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
@@ -127,7 +120,7 @@ export class GPUScene {
     }
 
     private addMaterial(
-        material: THREE.MeshStandardMaterial
+        material: THREE.MeshPhysicalMaterial
     ): number {
 
         const existing =
