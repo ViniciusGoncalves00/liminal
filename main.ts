@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { SceneLayer, SceneManager } from "./sceneManager";
 import { ObjectFactory } from "./objectFactory";
-import type { GPUSky } from "./raytracer/gpu/gpy-sky";
+import type { GPUSky } from "./raytracer/gpu/gpu-sky";
 
 const editorView = document.getElementById('editor-view') as HTMLCanvasElement;
 const gameView = document.getElementById('game-view') as HTMLCanvasElement;

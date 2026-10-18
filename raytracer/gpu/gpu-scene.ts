@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GPUTriangle } from "./gpu-triangle";
 import { BVHNode } from "./BVHNode";
 import { BVHBuilder } from "./BVHBuilder";
-import { GPUSky } from "./gpy-sky";
+import { GPUSky } from "./gpu-sky";
 
 export class GPUScene {
     private readonly device: GPUDevice;

@@ -6,7 +6,7 @@ import colorConversorShader from "./color.wgsl?raw";
 import randomShader from "./random.wgsl?raw";
 import mainShader from "./main.wgsl?raw";
 import { GPUMaterial } from "./gpu-material";
-import { GPUSky } from "./gpy-sky";
+import { GPUSky } from "./gpu-sky";
 
 export class ComputeRayTracer {
 
