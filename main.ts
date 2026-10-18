@@ -141,7 +141,7 @@ function createAOCubes() {
     lightCube.position.set(0.0, 1.0, 0.0);
     Main.sceneManager.addObject(lightCube, SceneLayer.Game, SceneLayer.Editor);
 
-    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.01, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube.position.set(0.0, -1.0, 0.0);
     Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 }
@@ -181,20 +181,13 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         horizonColor: `#${sceneManager.ambient.horizonColor.getHexString()}`,
         zenithColor: `#${sceneManager.ambient.zenithColor.getHexString()}`,
         fogColor: `#${sceneManager.ambient.fogColor.getHexString()}`,
+        fogSpreadness: sceneManager.ambient.fogSpreadness,
         azimuth: 0,
-        elevation: 90,
+        elevation: 45,
         sunIntensity: sceneManager.ambient.sunIntensity,
     };
 
     const skyFolder = gui.addFolder("Sky");
-
-    skyFolder
-        .addColor(params, "horizonColor")
-        .name("Horizon Color")
-        .onChange((value: string) => {
-            const color = new THREE.Color(value);
-            sceneManager.setHorizonColor(color.r, color.g, color.b);
-        });
 
     skyFolder
         .addColor(params, "zenithColor")
@@ -205,11 +198,26 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         });
 
     skyFolder
+        .addColor(params, "horizonColor")
+        .name("Horizon Color")
+        .onChange((value: string) => {
+            const color = new THREE.Color(value);
+            sceneManager.setHorizonColor(color.r, color.g, color.b);
+        });
+
+    skyFolder
         .addColor(params, "fogColor")
         .name("Fog Color")
         .onChange((value: string) => {
             const color = new THREE.Color(value);
             sceneManager.setFogColor(color.r, color.g, color.b);
+        });
+    
+    skyFolder
+        .add(params, "fogSpreadness", 1, 100, 0.1)
+        .name("Fog Spreadness")
+        .onChange((value: number) => {
+            sceneManager.setfogSpreadness(value);
         });
 
     const sunFolder = gui.addFolder("Sun");
@@ -227,12 +235,12 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         sceneManager.setSunDirection(...direction.toArray());
     };
 
-    sunFolder.add(params, "azimuth", 0, 360, 1)
-        .name("Horizontal Rotation")
+    sunFolder.add(params, "elevation", -90, 90, 1)
+        .name("Elevation")
         .onChange(updateDirection);
 
-    sunFolder.add(params, "elevation", 0, 90, 1)
-        .name("Elevation")
+    sunFolder.add(params, "azimuth", 0, 360, 1)
+        .name("Horizontal Rotation")
         .onChange(updateDirection);
 
     sunFolder

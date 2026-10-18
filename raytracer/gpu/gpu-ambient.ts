@@ -15,7 +15,7 @@ export class GPUAmbient {
             zenithColor : vec3<f32>,
             _offset2: f32,
             fogColor : vec3<f32>,
-            _offset3: f32,
+            fogSpreadness: f32,
             sunDirection : vec3<f32>,
             sunIntensity : f32,
         };
@@ -24,6 +24,7 @@ export class GPUAmbient {
     public readonly horizonColor = new Float32Array(3);
     public readonly zenithColor = new Float32Array(3);
     public readonly fogColor = new Float32Array(3);
+    public readonly fogSpreadness = new Float32Array(1);
     public readonly sunDirection = new Float32Array(3);
     public readonly sunIntensity = new Float32Array(1);
     public readonly buffer: GPUBuffer;
@@ -75,6 +76,11 @@ export class GPUAmbient {
         return this;
     }
 
+    public setfogSpreadness(v: number): GPUAmbient {
+        this.fogSpreadness[0] = v;
+        return this;
+    }
+
     public setSunDirection(x: number, y: number, z: number): GPUAmbient {
         this.sunDirection[0] = x;
         this.sunDirection[1] = y;
@@ -95,7 +101,10 @@ export class GPUAmbient {
         floatOffset += 4;
 
         array.set(this.fogColor, floatOffset);
-        floatOffset += 4;
+        floatOffset += 3;
+
+        array.set(this.fogSpreadness, floatOffset);
+        floatOffset += 1;
 
         array.set(this.sunDirection, floatOffset);
         floatOffset += 3;

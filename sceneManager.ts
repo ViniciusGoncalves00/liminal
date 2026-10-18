@@ -39,8 +39,9 @@ export class SceneManager {
         this.threeScene = new THREE.Scene();
         this.gpuScene = new GPUScene(device);
         this.setSunIntensity(1.1);
-        this.setSunDirection(0, 1 ,0);
-        this.setFogColor(0.8, 0.8, 0.8);
+        this.setSunDirection(0.0, 0.707, 0.707);
+        this.setFogColor(1.0, 1.0, 1.0);
+        this.setfogSpreadness(10.0);
         this.setHorizonColor(0.25, 0.55, 0.85);
         this.setZenithColor(0.10, 0.25, 0.50);
 
@@ -142,6 +143,11 @@ export class SceneManager {
     public setFogColor(r: number, g: number, b: number): void {
         this.ambient.setFogColor(r, g, b);
         this.gpuScene.gpuAmbient.setFogColor(r, g, b);
+    }
+
+    public setfogSpreadness(v: number): void {
+        this.ambient.setfogSpreadness(v);
+        this.gpuScene.gpuAmbient.setfogSpreadness(v);
     }
     
     public setSunDirection(x: number, y: number, z: number): void {

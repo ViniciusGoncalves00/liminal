@@ -258,7 +258,7 @@ fn skyColor(rayDirection: vec3<f32>) -> vec3<f32> {
 
     var fogDot = 1.0 - rayDot;
     if (fogDot > 0.0) {
-        fogDot = pow(fogDot, 2.0);
+        fogDot = pow(fogDot, skyData.fogSpreadness);
     } else {
         fogDot = 0.0;
     }
