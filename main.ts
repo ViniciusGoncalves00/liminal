@@ -94,8 +94,14 @@ const loop = (time: number) => {
 loop(0);
 
 function createRoom() {
+    const groundGeometry = new THREE.CircleGeometry(1000);
+    const ground = new THREE.Mesh( groundGeometry, new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    ground.position.set(0, -2.55, 0);
+    ground.rotateX(THREE.MathUtils.degToRad(-90));
+    Main.sceneManager.addObject(ground, SceneLayer.Game, SceneLayer.Editor);
+    
     const baseGeometry = new THREE.BoxGeometry( 5, 0.1, 5 );
-    const floor = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    const floor = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
     floor.position.set(0, -2.5, 0);
 
     Main.sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
@@ -117,7 +123,7 @@ function createRoom() {
 
     Main.sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
 
-    const back = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    const back = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
     back.position.set(0, 0, -2.5);
     back.rotateX(THREE.MathUtils.degToRad(90));
 
@@ -131,17 +137,17 @@ function createRoom() {
 }
 
 function createAOCubes() {
-    const lightCube = new THREE.Mesh( new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.0, emissiveIntensity: 1.0, ior: 0.0 } ));
+    const lightCube = new THREE.Mesh( new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.2, metalness: 0.0, emissiveIntensity: 1.0, ior: 0.0 } ));
     lightCube.position.set(0.0, 1.0, 0.0);
     Main.sceneManager.addObject(lightCube, SceneLayer.Game, SceneLayer.Editor);
 
-    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.01, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.01, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube.position.set(0.0, -1.0, 0.0);
     Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 }
 
 function createSphere() {
-    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 64, 64), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 64, 64), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     Main.sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
 }
 
@@ -161,7 +167,7 @@ function createManyCubes() {
 function createManyLights() {
     for (let x = -1; x < 2; x++) {
         for (let z = -1; z < 2; z++) {
-            const plafon = new THREE.Mesh( new THREE.BoxGeometry(1.0, 0.01, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.0 } ) );
+            const plafon = new THREE.Mesh( new THREE.BoxGeometry(1.0, 0.01, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, emissive: 0xf0f0f0, emissiveIntensity: 1.0 } ) );
             plafon.position.set(x * 1.5, 2.445, z * 1.5);
             Main.sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
         }
@@ -171,21 +177,10 @@ function createManyLights() {
 export function createSkyGUI(sceneManager: SceneManager): GUI {
     const gui = new GUI({ title: "Sky Settings" });
 
-    const horizon = new THREE.Color().setRGB(
-        sceneManager.ambient.horizonColor.r,
-        sceneManager.ambient.horizonColor.g,
-        sceneManager.ambient.horizonColor.b
-    );
-
-    const zenith = new THREE.Color().setRGB(
-        sceneManager.ambient.horizonColor.r,
-        sceneManager.ambient.horizonColor.g,
-        sceneManager.ambient.horizonColor.b
-    );
-
     const params = {
-        horizonColor: `#${horizon.getHexString()}`,
-        zenithColor: `#${zenith.getHexString()}`,
+        horizonColor: `#${sceneManager.ambient.horizonColor.getHexString()}`,
+        zenithColor: `#${sceneManager.ambient.zenithColor.getHexString()}`,
+        fogColor: `#${sceneManager.ambient.fogColor.getHexString()}`,
         azimuth: 0,
         elevation: 90,
         sunIntensity: sceneManager.ambient.sunIntensity,
@@ -209,6 +204,14 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
             sceneManager.setZenithColor(color.r, color.g, color.b);
         });
 
+    skyFolder
+        .addColor(params, "fogColor")
+        .name("Fog Color")
+        .onChange((value: string) => {
+            const color = new THREE.Color(value);
+            sceneManager.setFogColor(color.r, color.g, color.b);
+        });
+
     const sunFolder = gui.addFolder("Sun");
 
     const updateDirection = () => {
@@ -228,7 +231,7 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .name("Horizontal Rotation")
         .onChange(updateDirection);
 
-    sunFolder.add(params, "elevation", -90, 90, 1)
+    sunFolder.add(params, "elevation", 0, 90, 1)
         .name("Elevation")
         .onChange(updateDirection);
 
