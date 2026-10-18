@@ -9,38 +9,39 @@ export class GPUTriangle {
             p1 : vec4<f32>,
             p2 : vec4<f32>,
 
+            normal : vec3<f32>,
             materialId : u32,
-            _pad0 : u32,
-            _pad1 : u32,
-            _pad2 : u32,
         };
     `;
 
     public readonly p0 = new THREE.Vector4();
     public readonly p1 = new THREE.Vector4();
     public readonly p2 = new THREE.Vector4();
-
+    
+    public readonly normal = new THREE.Vector3();
     public materialId = 0;
 
-    public constructor(p0?: THREE.Vector3, p1?: THREE.Vector3, p2?: THREE.Vector3, materialId = 0) {
+    public constructor(p0?: THREE.Vector3, p1?: THREE.Vector3, p2?: THREE.Vector3, normal?: THREE.Vector3, materialId = 0) {
         if (p0) this.p0.set(p0.x, p0.y, p0.z, 1);
         if (p1) this.p1.set(p1.x, p1.y, p1.z, 1);
         if (p2) this.p2.set(p2.x, p2.y, p2.z, 1);
+        if (normal) this.normal.copy(normal);
 
         this.materialId = materialId;
     }
 
-    public setFromPoints(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, materialId: number): this {
+    public setFromPoints(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, normal: THREE.Vector3, materialId: number): this {
         this.p0.set(p0.x, p0.y, p0.z, 0);
         this.p1.set(p1.x, p1.y, p1.z, 0);
         this.p2.set(p2.x, p2.y, p2.z, 0);
+        this.normal.copy(normal);
 
         this.materialId = materialId;
 
         return this;
     }
 
-    public write(buffer: ArrayBuffer, byteOffset = 0): void {
+    public write(buffer: ArrayBuffer, byteOffset = 0): number {
         const floats = new Float32Array(buffer, byteOffset, GPUTriangle.FLOAT_COUNT);
         const uints = new Uint32Array(buffer, byteOffset, GPUTriangle.FLOAT_COUNT);
 
@@ -61,10 +62,12 @@ export class GPUTriangle {
         floats[i++] = this.p2.z;
         floats[i++] = this.p2.w;
 
+        floats[i++] = this.normal.x;
+        floats[i++] = this.normal.y;
+        floats[i++] = this.normal.z;
+
         uints[i++] = this.materialId;
 
-        uints[i++] = 0;
-        uints[i++] = 0;
-        uints[i++] = 0;
+        return byteOffset + i;
     }
 }

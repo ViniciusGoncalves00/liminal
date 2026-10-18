@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GPUTriangle } from "./gpu-triangle";
 import { BVHNode } from "./BVHNode";
 import { BVHBuilder } from "./BVHBuilder";
+import { GPUSky } from "./gpy-sky";
 
 export class GPUScene {
     private readonly device: GPUDevice;
@@ -9,6 +10,8 @@ export class GPUScene {
     public triangleBuffer!: GPUBuffer;
     public materialBuffer!: GPUBuffer;
     public bvhBuffer!: GPUBuffer;
+    public skyBuffer!: GPUBuffer;
+    public gpuSky: GPUSky;
     private bvhData: BVHNode[] = [];
 
     private readonly triangleData: GPUTriangle[] = [];
@@ -16,12 +19,16 @@ export class GPUScene {
 
     private readonly materialMap = new Map<THREE.Material, number>();
 
-    private readonly a = new THREE.Vector3();
-    private readonly b = new THREE.Vector3();
-    private readonly c = new THREE.Vector3();
+    private readonly tempP0 = new THREE.Vector3();
+    private readonly tempP1 = new THREE.Vector3();
+    private readonly tempP2 = new THREE.Vector3();
+    private readonly tempNormal = new THREE.Vector3();
 
     public constructor(device: GPUDevice) {
         this.device = device;
+        this.gpuSky = new GPUSky(device);
+        this.gpuSky.setSunIntensity(1.1);
+        this.gpuSky.setSunDirection(new THREE.Vector3(0, 1, 0));
     }
 
     public update(scene: THREE.Scene): void {
@@ -64,83 +71,72 @@ export class GPUScene {
             return;
 
         if (Array.isArray(mesh.material))
-            throw new Error(
-                "Multiple materials are not supported yet."
-            );
+            throw new Error("Multiple materials are not supported yet.");
 
         const material = mesh.material as THREE.MeshPhysicalMaterial;
 
-        const materialId =
-            this.addMaterial(material);
+        const materialId = this.addMaterial(material);
 
         const index = geometry.index;
         const world = mesh.matrixWorld;
 
         if (index) {
             for (let i = 0; i < index.count; i += 3) {
-                this.a.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
-                this.b.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
-                this.c.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
+                this.tempP0.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
+                this.tempP1.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
+                this.tempP2.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
+                this.tempNormal.crossVectors(
+                    this.tempP1.clone().sub(this.tempP0),
+                    this.tempP2.clone().sub(this.tempP0)
+                ).normalize();
 
                 this.pushTriangle(materialId);
             }
 
         } else {
-
             for (let i = 0; i < positions.count; i += 3) {
-
-                this.a.fromBufferAttribute(positions, i).applyMatrix4(world);
-                this.b.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
-                this.c.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
+                this.tempP0.fromBufferAttribute(positions, i).applyMatrix4(world);
+                this.tempP1.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
+                this.tempP2.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
+                this.tempNormal.crossVectors(
+                    this.tempP1.clone().sub(this.tempP0),
+                    this.tempP2.clone().sub(this.tempP0)
+                ).normalize();
 
                 this.pushTriangle(materialId);
             }
         }
 
-        console.log(
-            "Triangles:",
-            this.triangleData.length
-        );
+        // console.log(
+        //     "Triangles:",
+        //     this.triangleData.length
+        // );
 
-        console.log(
-            "BVH nodes:",
-            this.bvhData.length
-        );
+        // console.log(
+        //     "BVH nodes:",
+        //     this.bvhData.length
+        // );
     }
 
     private pushTriangle(materialId: number): void {
         this.triangleData.push(
             new GPUTriangle(
-                this.a,
-                this.b,
-                this.c,
+                this.tempP0,
+                this.tempP1,
+                this.tempP2,
+                this.tempNormal,
                 materialId
             )
         );
     }
 
-    private addMaterial(
-        material: THREE.MeshPhysicalMaterial
-    ): number {
+    private addMaterial(material: THREE.MeshPhysicalMaterial): number {
+        const existing = this.materialMap.get(material);
 
-        const existing =
-            this.materialMap.get(material);
-
-        if (existing !== undefined)
-            return existing;
+        if (existing !== undefined) return existing;
 
         const id = this.materialMap.size;
-
         this.materialMap.set(material, id);
-
-        /*
-         * WGSL:
-         *
-         * struct Material {
-         *     baseColor : vec4<f32>,
-         *     properties : vec4<f32>,
-         * };
-         */
 
         const data = new Float32Array(8);
 
@@ -341,6 +337,15 @@ export class GPUScene {
             this.bvhBuffer,
             0,
             bvhArrayBuffer
+        );
+
+        const skyArrayBuffer = new Float32Array(GPUSky.SIZE);
+        this.gpuSky.write(skyArrayBuffer, 0);
+
+        this.device.queue.writeBuffer(
+            this.gpuSky.buffer,
+            0,
+            skyArrayBuffer
         );
     }
 }

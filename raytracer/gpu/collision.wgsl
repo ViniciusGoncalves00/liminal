@@ -1,4 +1,4 @@
-fn intersectRayTriangle(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, triangle: Triangle, hitNormal: ptr<function, vec3<f32>>) -> f32 {       
+fn intersectRayTriangle(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, triangle: Triangle) -> f32 {       
     let edge1 = triangle.p1.xyz - triangle.p0.xyz;
     let edge2 = triangle.p2.xyz - triangle.p0.xyz;
             
@@ -33,8 +33,6 @@ fn intersectRayTriangle(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, triangle:
     if (t <= 0.0) {
         return -1.0;
     }
-            
-    *hitNormal = normalize(cross(edge1, edge2));
             
     return t;
 }

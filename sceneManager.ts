@@ -12,23 +12,23 @@ export const SceneLayer = {
 export type SceneLayer = typeof SceneLayer[keyof typeof SceneLayer];
 
 export class SceneManager {
-    private readonly editorView: HTMLCanvasElement;
-    private readonly gameView: HTMLCanvasElement;
+    private editorView!: HTMLCanvasElement;
+    private gameView!: HTMLCanvasElement;
 
-    private readonly scene: THREE.Scene;
+    private scene!: THREE.Scene;
 
-    private readonly editorRenderer: THREE.WebGLRenderer;
-    // private readonly gameRenderer: THREE.WebGLRenderer;
-    // private readonly gameRayTracingRenderer: RayTracingRenderer;
-    private readonly gameRayTracerRenderer: RayTracerRenderer;
+    private editorRenderer!: THREE.WebGLRenderer;
+    // private gameRenderer: THREE.WebGLRenderer;
+    // private gameRayTracingRenderer: RayTracingRenderer;
+    public gameRayTracerRenderer!: RayTracerRenderer;
 
-    public readonly editorCamera: THREE.PerspectiveCamera;
-    public readonly gameCamera: THREE.PerspectiveCamera;
+    public editorCamera!: THREE.PerspectiveCamera;
+    public gameCamera!: THREE.PerspectiveCamera;
 
-    private readonly editorControls: OrbitControls;
-    private readonly gameControls: OrbitControls;
+    private editorControls!: OrbitControls;
+    private gameControls!: OrbitControls;
 
-    public constructor(editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement, scene: THREE.Scene = new THREE.Scene()) {
+    public async init(editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement, scene: THREE.Scene = new THREE.Scene()) {
         this.editorView = editorElement ?? this.createCanvas('editor-view');
         this.gameView = gameElement ?? this.createCanvas('game-view');
 
@@ -40,7 +40,7 @@ export class SceneManager {
         });
 
         this.gameRayTracerRenderer = new RayTracerRenderer();
-        this.gameRayTracerRenderer.init(this.gameView);
+        await this.gameRayTracerRenderer.init(this.gameView);
 
         const xRays = 19;
         const yRays = 11;

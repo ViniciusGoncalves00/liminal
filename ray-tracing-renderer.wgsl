@@ -146,7 +146,7 @@ fn worldHit(ray : Ray) -> HitData{
 
     for(var i=0u;i<triangleCount;i++){
 
-        let hit = intersectRayTriangle(ray,triangles[i]);
+        let hit = intersectRayTriangle(ray, triangles[i]);
 
         if(hit.hit && hit.t < closest.t){
 

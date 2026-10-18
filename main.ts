@@ -1,17 +1,21 @@
 import "./style.css";
 import * as THREE from 'three';
+import GUI from 'lil-gui';
 import { SceneLayer, SceneManager } from "./sceneManager";
 import { ObjectFactory } from "./objectFactory";
+import type { GPUSky } from "./raytracer/gpu/gpy-sky";
 
 const editorView = document.getElementById('editor-view') as HTMLCanvasElement;
 const gameView = document.getElementById('game-view') as HTMLCanvasElement;
 const fps = document.getElementById('fps') as HTMLDivElement;
 
-const sceneManager = new SceneManager(editorView, gameView);
+const sceneManager = new SceneManager();
+await sceneManager.init(editorView, gameView);
+const gui = createSkyGUI(sceneManager.gameRayTracerRenderer.gpuScene?.gpuSky!);
 
 createRoom();
-createSphere();
-// createAOCubes();
+// createSphere();
+createAOCubes();
 // createManyCubes();
 // createManyLights();
 
@@ -19,12 +23,15 @@ let lastTime = 0;
 const loop = (time: number) => {
     requestAnimationFrame(loop);
 
-    const deltaTime = 1000 / (time - lastTime);
+    const deltaTime = (time - lastTime) / 1000;
     sceneManager.animate(deltaTime);
     
     fps.innerText = deltaTime.toFixed(0) + " FPS";
 
     lastTime = time;
+    // const sunDirection = new THREE.Vector3(Math.sin(time * 0.001), 1.0, Math.cos(time * 0.001)).normalize();
+    // const sunDirection = new THREE.Vector3(1.0, Math.sin(time * 0.001), 1.0).normalize();
+    // sceneManager.gameRayTracerRenderer.gpuScene?.gpuSky.setSunDirection(sunDirection);
 }
 
 loop(0);
@@ -36,7 +43,7 @@ function createRoom() {
 
     sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
-    const ceiling = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0x222222, roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    const ceiling = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
     ceiling.position.set(0, 2.5, 0);
 
     sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
@@ -67,11 +74,11 @@ function createRoom() {
 }
 
 function createAOCubes() {
-    const lightCube = new THREE.Mesh( new THREE.BoxGeometry(1.0, 1.0, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.0, emissiveIntensity: 1.0, ior: 0.0 } ));
+    const lightCube = new THREE.Mesh( new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.2, metalness: 0.0, emissiveIntensity: 1.0, ior: 0.0 } ));
     lightCube.position.set(0.0, 1.0, 0.0);
     sceneManager.addObject(lightCube, SceneLayer.Game, SceneLayer.Editor);
 
-    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 1.0, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0xffffff, roughness: 0.01, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube.position.set(0.0, -1.0, 0.0);
     sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 }
@@ -102,4 +109,76 @@ function createManyLights() {
             sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
         }
     }
+}
+
+export function createSkyGUI(sky: GPUSky): GUI {
+    const gui = new GUI({ title: "Sky Settings" });
+
+    const horizon = new THREE.Color().setRGB(
+        sky.horizonColor[0],
+        sky.horizonColor[1],
+        sky.horizonColor[2]
+    );
+
+    const zenith = new THREE.Color().setRGB(
+        sky.zenithColor[0],
+        sky.zenithColor[1],
+        sky.zenithColor[2]
+    );
+
+    const params = {
+        horizonColor: `#${horizon.getHexString()}`,
+        zenithColor: `#${zenith.getHexString()}`,
+        azimuth: 0,
+        elevation: 90,
+        sunIntensity: sky.sunIntensity[0],
+    };
+
+    const skyFolder = gui.addFolder("Sky");
+
+    skyFolder
+        .addColor(params, "horizonColor")
+        .name("Horizon Color")
+        .onChange((value: string) => {
+            sky.setHorizonColor(new THREE.Color(value));
+        });
+
+    skyFolder
+        .addColor(params, "zenithColor")
+        .name("Zenith Color")
+        .onChange((value: string) => {
+            sky.setZenithColor(new THREE.Color(value));
+        });
+
+    const sunFolder = gui.addFolder("Sun");
+
+    const updateDirection = () => {
+        const azimuth = THREE.MathUtils.degToRad(params.azimuth);
+        const elevation = THREE.MathUtils.degToRad(params.elevation);
+
+        const direction = new THREE.Vector3(
+            Math.cos(elevation) * Math.sin(azimuth),
+            Math.sin(elevation),
+            Math.cos(elevation) * Math.cos(azimuth)
+        ).normalize();
+
+        sky.setSunDirection(direction);
+    };
+
+    sunFolder.add(params, "azimuth", 0, 360, 1)
+        .name("Horizontal Rotation")
+        .onChange(updateDirection);
+
+    sunFolder.add(params, "elevation", -90, 90, 1)
+        .name("Elevation")
+        .onChange(updateDirection);
+
+    sunFolder
+        .add(params, "sunIntensity", 1, 10, 0.1)
+        .name("Intensity")
+        .onChange((value: number) => {
+            sky.setSunIntensity(value);
+        });
+
+    return gui;
 }
