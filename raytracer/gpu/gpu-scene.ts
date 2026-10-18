@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GPUTriangle } from "./gpu-triangle";
 import { BVHNode } from "./BVHNode";
 import { BVHBuilder } from "./BVHBuilder";
-import { GPUSky } from "./gpu-sky";
+import { GPUAmbient } from "./gpu-ambient";
 
 export class GPUScene {
     private readonly device: GPUDevice;
@@ -11,7 +11,7 @@ export class GPUScene {
     public materialBuffer!: GPUBuffer;
     public bvhBuffer!: GPUBuffer;
     public skyBuffer!: GPUBuffer;
-    public gpuSky: GPUSky;
+    public gpuAmbient: GPUAmbient;
     private bvhData: BVHNode[] = [];
 
     private readonly triangleData: GPUTriangle[] = [];
@@ -26,9 +26,7 @@ export class GPUScene {
 
     public constructor(device: GPUDevice) {
         this.device = device;
-        this.gpuSky = new GPUSky(device);
-        this.gpuSky.setSunIntensity(1.1);
-        this.gpuSky.setSunDirection(new THREE.Vector3(0, 1, 0));
+        this.gpuAmbient = new GPUAmbient(device);
     }
 
     public update(scene: THREE.Scene): void {
@@ -106,16 +104,6 @@ export class GPUScene {
                 this.pushTriangle(materialId);
             }
         }
-
-        // console.log(
-        //     "Triangles:",
-        //     this.triangleData.length
-        // );
-
-        // console.log(
-        //     "BVH nodes:",
-        //     this.bvhData.length
-        // );
     }
 
     private pushTriangle(materialId: number): void {
@@ -339,11 +327,11 @@ export class GPUScene {
             bvhArrayBuffer
         );
 
-        const skyArrayBuffer = new Float32Array(GPUSky.SIZE);
-        this.gpuSky.write(skyArrayBuffer, 0);
+        const skyArrayBuffer = new Float32Array(GPUAmbient.SIZE);
+        this.gpuAmbient.write(skyArrayBuffer, 0);
 
         this.device.queue.writeBuffer(
-            this.gpuSky.buffer,
+            this.gpuAmbient.buffer,
             0,
             skyArrayBuffer
         );

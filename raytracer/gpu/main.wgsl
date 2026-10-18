@@ -260,17 +260,15 @@ fn skyColor(direction: vec3<f32>) -> vec3<f32> {
 
     var dot = dot(direction, sunDirection);
 
-    let darkBlue = vec3<f32>(0.10, 0.25, 0.50);
-    let lightBlue = vec3<f32>(0.25, 0.55, 0.85);
-    let sunColor = vec3<f32>(1.0 * sunSize, 1.0 * sunSize, 1.0 * sunSize);
-
-    var skyColor = mix(darkBlue, lightBlue, dot);
+    var skyColor = mix(skyData.zenithColor, skyData.horizonColor, dot);
 
     if (dot > 0.0) {
         dot = pow(dot, 1000.0);
     } else {
         dot = 0.0;
     }
+
+    let sunColor = vec3<f32>(sunSize, sunSize, sunSize);
     skyColor = mix(skyColor, sunColor, dot);
 
     return skyColor;

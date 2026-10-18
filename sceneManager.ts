@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { RayTracingRenderer } from './ray-tracing-renderer';
-import { RayTracerRenderer } from './raytracer/ray-tracer-renderer';
+import { RayTracingRenderer } from './raytracer/raytracing-renderer';
+import { GPUScene } from './raytracer/gpu/gpu-scene';
+import { GPUCamera } from './raytracer/gpu/gpu-camera';
+import { Ambient } from './raytracer/ambient';
 
 export const SceneLayer = {
     Game: 0,
@@ -12,91 +14,53 @@ export const SceneLayer = {
 export type SceneLayer = typeof SceneLayer[keyof typeof SceneLayer];
 
 export class SceneManager {
-    private editorView!: HTMLCanvasElement;
-    private gameView!: HTMLCanvasElement;
+    private editorCanvas: HTMLCanvasElement;
+    private gameCanvas: HTMLCanvasElement;
 
-    private scene!: THREE.Scene;
+    private threeScene: THREE.Scene;
+    public gpuScene: GPUScene;
 
-    private editorRenderer!: THREE.WebGLRenderer;
-    // private gameRenderer: THREE.WebGLRenderer;
-    // private gameRayTracingRenderer: RayTracingRenderer;
-    public gameRayTracerRenderer!: RayTracerRenderer;
+    private editorRenderer: THREE.WebGLRenderer;
+    public gameRenderer: RayTracingRenderer;
 
-    public editorCamera!: THREE.PerspectiveCamera;
-    public gameCamera!: THREE.PerspectiveCamera;
+    public editorCamera: THREE.PerspectiveCamera;
+    public gameCamera: THREE.PerspectiveCamera;
+    public gpuCamera: GPUCamera;
 
-    private editorControls!: OrbitControls;
-    private gameControls!: OrbitControls;
+    private editorControls: OrbitControls;
+    private gameControls: OrbitControls;
 
-    public async init(editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement, scene: THREE.Scene = new THREE.Scene()) {
-        this.editorView = editorElement ?? this.createCanvas('editor-view');
-        this.gameView = gameElement ?? this.createCanvas('game-view');
+    public ambient: Ambient = new Ambient();
 
-        this.scene = scene;
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+    public constructor(device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat, editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement) {
+        this.editorCanvas = editorElement ?? this.createCanvas('editor-view');
+        this.gameCanvas = gameElement ?? this.createCanvas('game-view');
 
-        this.editorRenderer = new THREE.WebGLRenderer({
-            canvas: this.editorView
-        });
+        this.threeScene = new THREE.Scene();
+        this.gpuScene = new GPUScene(device);
+        this.setSunIntensity(1.1);
+        this.setSunDirection(0, 1 ,0);
+        this.setHorizonColor(0.25, 0.55, 0.85);
+        this.setZenithColor(0.10, 0.25, 0.50);
 
-        this.gameRayTracerRenderer = new RayTracerRenderer();
-        await this.gameRayTracerRenderer.init(this.gameView);
-
-        const xRays = 19;
-        const yRays = 11;
+        this.editorRenderer = new THREE.WebGLRenderer({canvas: this.editorCanvas})
+        this.gameRenderer = new RayTracingRenderer(device, context, format, this.gameCanvas);
 
         this.resize();
 
         this.gameCamera = this.createGameCamera();
         this.editorCamera = this.createEditorCamera();
+        this.gpuCamera = new GPUCamera(device);
 
-        this.scene.add(this.gameCamera);
-        this.scene.add(this.editorCamera);
-
-        this.gameCamera.layers.enable(SceneLayer.Game);
-        this.gameCamera.layers.disable(SceneLayer.Editor);
+        this.threeScene.add(new THREE.AmbientLight(0xffffff, 0.1));
+        this.threeScene.add(this.gameCamera);
+        this.threeScene.add(this.editorCamera);
 
         this.editorCamera.layers.enable(SceneLayer.Game);
         this.editorCamera.layers.enable(SceneLayer.Editor);
 
-        const points: THREE.Vector3[] = [];
-
-        for (let x = 0; x < xRays; x++) {
-            for (let y = 0; y < yRays; y++) {
-                const nx = (x + 0.5) / xRays * 2 - 1;
-                const ny = 1 - (y + 0.5) / yRays * 2;
-
-                const nearHeight =
-                    2 * Math.tan(THREE.MathUtils.degToRad(this.gameCamera.fov / 2)) * this.gameCamera.near;
-                            
-                const nearWidth = nearHeight * this.gameCamera.aspect;
-                            
-                const farHeight =
-                    2 * Math.tan(THREE.MathUtils.degToRad(this.gameCamera.fov / 2)) * this.gameCamera.far;
-                            
-                const farWidth = farHeight * this.gameCamera.aspect;
-
-                const nearPoint = new THREE.Vector3(
-                    nx * nearWidth * 0.5,
-                    ny * nearHeight * 0.5,
-                    -this.gameCamera.near
-                );
-            
-                const farPoint = new THREE.Vector3(
-                    nx * farWidth * 0.5,
-                    ny * farHeight * 0.5,
-                    -this.gameCamera.far
-                );
-
-                points.push(nearPoint);
-                points.push(farPoint);
-            }
-        }
-
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({color: 0xffff00});
-        const rays = new THREE.LineSegments(geometry, material);
-        // this.gameCamera.add(rays);
+        this.gameCamera.layers.enable(SceneLayer.Game);
+        this.gameCamera.layers.disable(SceneLayer.Editor);
 
         this.editorControls = new OrbitControls(
             this.editorCamera,
@@ -105,7 +69,7 @@ export class SceneManager {
         
         this.gameControls = new OrbitControls(
             this.gameCamera,
-            this.gameView
+            this.gameCanvas
         );
 
         new TransformControls(this.editorCamera, this.editorRenderer.domElement);
@@ -119,8 +83,11 @@ export class SceneManager {
         this.editorControls.update(deltaTime);
         this.gameControls.update(deltaTime);
 
-        this.editorRenderer.render(this.scene, this.editorCamera);
-        this.gameRayTracerRenderer.render(this.scene, this.gameCamera);
+        this.gpuScene.update(this.threeScene);
+        this.gpuCamera.update(this.gameCamera, this.gameCanvas.width / this.gameCanvas.height);
+
+        this.editorRenderer.render(this.threeScene, this.editorCamera);
+        this.gameRenderer.render(this.gpuScene, this.gpuCamera);
     }
 
     /**
@@ -137,8 +104,8 @@ export class SceneManager {
             layers.forEach(layer => object.layers.enable(layer));
         }
 
-        this.scene.add(object);
-        this.gameRayTracerRenderer.gpuScene?.update(this.scene);
+        this.threeScene.add(object);
+        this.gpuScene.update(this.threeScene);
     }
 
     public addChildObject(
@@ -158,7 +125,27 @@ export class SceneManager {
     }
 
     public removeObject(object: THREE.Object3D): void {
-        this.scene.remove(object);
+        this.threeScene.remove(object);
+    }
+
+    public setHorizonColor(r: number, g: number, b: number): void {
+        this.ambient.setHorizonColor(r, g, b);
+        this.gpuScene.gpuAmbient.setHorizonColor(r, g, b);
+    }
+    
+    public setZenithColor(r: number, g: number, b: number): void {
+        this.ambient.setZenithColor(r, g, b);
+        this.gpuScene.gpuAmbient.setZenithColor(r, g, b);
+    }
+    
+    public setSunDirection(x: number, y: number, z: number): void {
+        this.ambient.setSunDirection(x, y, z);
+        this.gpuScene.gpuAmbient.setSunDirection(x, y, z);
+    }
+
+    public setSunIntensity(v: number): void {
+        this.ambient.setSunIntensity(v);
+        this.gpuScene.gpuAmbient.setSunIntensity(v);
     }
 
     private createCanvas(id: string): HTMLCanvasElement {
@@ -169,14 +156,14 @@ export class SceneManager {
     }
 
     private resize(): void {
-        const editorWidth = this.editorView.clientWidth;
-        const editorHeight = this.editorView.clientHeight;
+        const editorWidth = this.editorCanvas.clientWidth;
+        const editorHeight = this.editorCanvas.clientHeight;
 
-        const gameWidth = this.gameView.clientWidth;
-        const gameHeight = this.gameView.clientHeight;
+        const gameWidth = this.gameCanvas.clientWidth;
+        const gameHeight = this.gameCanvas.clientHeight;
 
         this.editorRenderer.setSize(editorWidth, editorHeight, false);
-        // this.gameRenderer.setSize(gameWidth, gameHeight, false);
+        this.gameRenderer.setSize(gameWidth, gameHeight, false);
 
         if (this.editorCamera) {
             this.editorCamera.aspect = editorWidth / editorHeight;
@@ -192,7 +179,7 @@ export class SceneManager {
     private createGameCamera(): THREE.PerspectiveCamera {
         const camera = new THREE.PerspectiveCamera(
             45,
-            this.gameView.clientWidth / this.gameView.clientHeight,
+            this.gameCanvas.clientWidth / this.gameCanvas.clientHeight,
             0.1,
             10000
         );
@@ -206,7 +193,7 @@ export class SceneManager {
     private createEditorCamera(): THREE.PerspectiveCamera {
         const camera = new THREE.PerspectiveCamera(
             75,
-            this.editorView.clientWidth / this.editorView.clientHeight,
+            this.editorCanvas.clientWidth / this.editorCanvas.clientHeight,
             0.1,
             10000
         );

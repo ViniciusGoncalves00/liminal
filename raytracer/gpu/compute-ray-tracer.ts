@@ -6,10 +6,9 @@ import colorConversorShader from "./color.wgsl?raw";
 import randomShader from "./random.wgsl?raw";
 import mainShader from "./main.wgsl?raw";
 import { GPUMaterial } from "./gpu-material";
-import { GPUSky } from "./gpu-sky";
+import { GPUAmbient } from "./gpu-ambient";
 
 export class ComputeRayTracer {
-
     public readonly outputTexture: GPUTexture;
     public readonly postProcessTexture: GPUTexture;
     public readonly gpuTextureView: GPUTextureView;
@@ -64,7 +63,7 @@ export class ComputeRayTracer {
                     ${GPUCamera.SHADER}
                     ${GPUTriangle.SHADER}
                     ${GPUMaterial.SHADER}
-                    ${GPUSky.SHADER}
+                    ${GPUAmbient.SHADER}
 
                     struct Time {
                         value: f32,
@@ -368,7 +367,7 @@ export class ComputeRayTracer {
                     {
                         binding: 6,
                         resource: {
-                            buffer: gpuScene.gpuSky.buffer
+                            buffer: gpuScene.gpuAmbient.buffer
                         }
                     },
                 ]
