@@ -40,6 +40,7 @@ export class SceneManager {
         this.gpuScene = new GPUScene(device);
         this.setSunIntensity(1.1);
         this.setSunDirection(0, 1 ,0);
+        this.setFogColor(0.8, 0.8, 0.8);
         this.setHorizonColor(0.25, 0.55, 0.85);
         this.setZenithColor(0.10, 0.25, 0.50);
 
@@ -137,8 +138,14 @@ export class SceneManager {
         this.ambient.setZenithColor(r, g, b);
         this.gpuScene.gpuAmbient.setZenithColor(r, g, b);
     }
+
+    public setFogColor(r: number, g: number, b: number): void {
+        this.ambient.setFogColor(r, g, b);
+        this.gpuScene.gpuAmbient.setFogColor(r, g, b);
+    }
     
     public setSunDirection(x: number, y: number, z: number): void {
+        this.threeScene.getObjectByName("sun")?.lookAt(x, y ,z);
         this.ambient.setSunDirection(x, y, z);
         this.gpuScene.gpuAmbient.setSunDirection(x, y, z);
     }
@@ -215,7 +222,7 @@ export class SceneManager {
         this.addObject(gameCameraHelper, SceneLayer.Editor);
 
         const light = new THREE.DirectionalLight();
-        light.position.set(5, 10, 7.5);
+        light.name = "sun";
         light.castShadow = true;
         light.shadow.mapSize.width = 1024;
         light.shadow.mapSize.height = 1024;

@@ -3,7 +3,7 @@ import * as THREE from "three";
 export class GPUAmbient {
     private readonly device: GPUDevice;
 
-    private static readonly FLOAT_COUNT = 11;
+    private static readonly FLOAT_COUNT = 15;
     private static readonly UINT_COUNT = 1;
     public static readonly BYTE_SIZE = GPUAmbient.FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT + GPUAmbient.UINT_COUNT * Uint32Array.BYTES_PER_ELEMENT;
     public static readonly SIZE = GPUAmbient.FLOAT_COUNT + GPUAmbient.UINT_COUNT;
@@ -14,6 +14,8 @@ export class GPUAmbient {
             _offset1: f32,
             zenithColor : vec3<f32>,
             _offset2: f32,
+            fogColor : vec3<f32>,
+            _offset3: f32,
             sunDirection : vec3<f32>,
             sunIntensity : f32,
         };
@@ -21,11 +23,12 @@ export class GPUAmbient {
 
     public readonly horizonColor = new Float32Array(3);
     public readonly zenithColor = new Float32Array(3);
+    public readonly fogColor = new Float32Array(3);
     public readonly sunDirection = new Float32Array(3);
     public readonly sunIntensity = new Float32Array(1);
     public readonly buffer: GPUBuffer;
 
-    public constructor(device: GPUDevice, horizonColor?: THREE.Color, zenithColor?: THREE.Color, sunDirection?: THREE.Vector3, sunIntensity?: number) {
+    public constructor(device: GPUDevice, horizonColor?: THREE.Color, zenithColor?: THREE.Color, fogColor?: THREE.Color, sunDirection?: THREE.Vector3, sunIntensity?: number) {
         this.device = device;
         this.buffer = this.device.createBuffer({
             size: GPUAmbient.BYTE_SIZE,
@@ -39,6 +42,10 @@ export class GPUAmbient {
         this.zenithColor[0] = zenithColor ? zenithColor.r : 1;
         this.zenithColor[1] = zenithColor ? zenithColor.g : 1;
         this.zenithColor[2] = zenithColor ? zenithColor.b : 1;
+
+        this.fogColor[0] = fogColor ? fogColor.r : 1;
+        this.fogColor[1] = fogColor ? fogColor.g : 1;
+        this.fogColor[2] = fogColor ? fogColor.b : 1;
 
         this.sunDirection[0] = sunDirection ? sunDirection.x : 0;
         this.sunDirection[1] = sunDirection ? sunDirection.y : 0;
@@ -61,6 +68,13 @@ export class GPUAmbient {
         return this;
     }
 
+    public setFogColor(r: number, g: number, b: number): GPUAmbient {
+        this.fogColor[0] = r;
+        this.fogColor[1] = g;
+        this.fogColor[2] = b;
+        return this;
+    }
+
     public setSunDirection(x: number, y: number, z: number): GPUAmbient {
         this.sunDirection[0] = x;
         this.sunDirection[1] = y;
@@ -78,6 +92,9 @@ export class GPUAmbient {
         floatOffset += 4;
 
         array.set(this.zenithColor, floatOffset);
+        floatOffset += 4;
+
+        array.set(this.fogColor, floatOffset);
         floatOffset += 4;
 
         array.set(this.sunDirection, floatOffset);

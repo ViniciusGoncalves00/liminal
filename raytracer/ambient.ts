@@ -3,6 +3,7 @@ import * as THREE from "three";
 export class Ambient {
     public readonly horizonColor: THREE.Color = new THREE.Color();
     public readonly zenithColor: THREE.Color = new THREE.Color();
+    public readonly fogColor: THREE.Color = new THREE.Color();
 
     public readonly sunDirection: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
     public sunIntensity: number = 1.0;
@@ -14,6 +15,11 @@ export class Ambient {
     
     public setZenithColor(r: number, g: number, b: number): Ambient {
         this.zenithColor.set(r, g, b);
+        return this;
+    }
+
+    public setFogColor(r: number, g: number, b: number): Ambient {
+        this.fogColor.set(r, g, b);
         return this;
     }
     
