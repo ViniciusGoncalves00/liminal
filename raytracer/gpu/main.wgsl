@@ -253,17 +253,17 @@ struct RaycastResult {
 // }
 
 fn skyColor(rayDirection: vec3<f32>) -> vec3<f32> {
-    var lookDot = abs(dot(rayDirection, vec3<f32>(0, 1, 0)));
-    var skyColor = mix(skyData.horizonColor, skyData.zenithColor, lookDot);
+    var rayDot = abs(dot(rayDirection, vec3<f32>(0, 1, 0)));
+    var skyColor = mix(skyData.horizonColor, skyData.zenithColor, rayDot);
 
-    var fogDot = 1.0 - lookDot;
+    var fogDot = 1.0 - rayDot;
     if (fogDot > 0.0) {
         fogDot = pow(fogDot, 2.0);
     } else {
         fogDot = 0.0;
     }
 
-    skyColor = mix(skyColor, skyData.fogColor, clamp(fogDot - 0.5, 0.0, 1.0));
+    skyColor = mix(skyColor, skyData.fogColor, clamp(fogDot, 0.0, 1.0));
     
     var sunDot = dot(rayDirection, skyData.sunDirection);
     if (sunDot > 0.0) {
@@ -274,6 +274,8 @@ fn skyColor(rayDirection: vec3<f32>) -> vec3<f32> {
 
     let sunColor = vec3<f32>(skyData.sunIntensity);
     skyColor = mix(skyColor, sunColor, sunDot);
+    let sunIntensity = skyData.sunDirection.y;
+    skyColor *= (sunIntensity + 1.0) / 2.0;
 
     return skyColor;
 }
