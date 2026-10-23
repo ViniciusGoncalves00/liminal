@@ -4,6 +4,35 @@ fn hsvToRgb(hsv: vec3<f32>) -> vec3<f32> {
     return hsv.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), hsv.y);
 }
 
+fn rgbToHsl(rgb: vec3<f32>) -> vec3<f32> {
+    let maxC = max(rgb.r, max(rgb.g, rgb.b));
+    let minC = min(rgb.r, min(rgb.g, rgb.b));
+    let delta = maxC - minC;
+
+    var h = 0.0;
+    var s = 0.0;
+    let l = (maxC + minC) * 0.5;
+
+    if (delta > 0.0) {
+        if (maxC == rgb.r) {
+            h = ((rgb.g - rgb.b) / delta) % 6.0;
+        } else if (maxC == rgb.g) {
+            h = (rgb.b - rgb.r) / delta + 2.0;
+        } else {
+            h = (rgb.r - rgb.g) / delta + 4.0;
+        }
+
+        h *= 60.0;
+        if (h < 0.0) {
+            h += 360.0;
+        }
+
+        s = delta / (1.0 - abs(2.0 * l - 1.0));
+    }
+
+    return vec3<f32>(h, s, l);
+}
+
 fn rgbToHsv(rgb: vec3<f32>) -> vec3<f32> {
     let r = rgb.r;
     let g = rgb.g;
