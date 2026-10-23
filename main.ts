@@ -4,6 +4,7 @@ import GUI from 'lil-gui';
 import { SceneLayer, SceneManager } from "./sceneManager";
 import type { GPUAmbient } from "./raytracer/gpu/gpu-ambient";
 import type { Ambient } from "./raytracer/ambient";
+import { degToRad } from "three/src/math/MathUtils.js";
 
 const fps = document.getElementById('fps') as HTMLDivElement;
 
@@ -72,7 +73,8 @@ Main.initUI();
 
 createRoom();
 // createSphere();
-createAOCubes();
+// createAOCubes();
+createReflectingCubes();
 // createManyCubes();
 // createManyLights();
 
@@ -141,9 +143,27 @@ function createAOCubes() {
     lightCube.position.set(0.0, 1.0, 0.0);
     Main.sceneManager.addObject(lightCube, SceneLayer.Game, SceneLayer.Editor);
 
-    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const cube = new THREE.Mesh( new THREE.BoxGeometry(4.8, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube.position.set(0.0, -1.0, 0.0);
     Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
+}
+
+function createReflectingCubes() {
+    const cube = new THREE.Mesh( new THREE.BoxGeometry(2.0, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    cube.position.set(1.0, -1.5, 0.0);
+    cube.rotateY(degToRad(15));
+    Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
+
+    const cube2 = new THREE.Mesh( new THREE.BoxGeometry(1.5, 1.0, 1.5), new THREE.MeshPhysicalMaterial( { color: 0x0000f0, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    cube2.position.set(-1.0, -1.95, 1.0);
+    cube2.rotateY(degToRad(-15));
+    Main.sceneManager.addObject(cube2, SceneLayer.Game, SceneLayer.Editor);
+
+    const cube3 = new THREE.Mesh( new THREE.BoxGeometry(1.0, 1.0, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xffbb00, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    cube3.position.set(0.0, -1.92, 4.0);
+    cube3.rotateY(degToRad(45));
+    cube3.rotateZ(degToRad(15));
+    Main.sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
 }
 
 function createSphere() {
