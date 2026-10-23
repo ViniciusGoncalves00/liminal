@@ -25,7 +25,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
-    const samplesPerPixel = 8u;
+    const samplesPerPixel = 10u;
     var materialLightSourceIntensity = 0.0;
 
     var pixelColor = vec3<f32>(0.0);
@@ -40,7 +40,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
         var randomX = random(&seed);
         var randomY = random(&seed);
 
-        var MAX_RAY_CASTING = 4u;
+        var MAX_RAY_CASTING = 6u;
         if (sample == 0u) {
             randomX = 0.5;
             randomY = 0.5;
