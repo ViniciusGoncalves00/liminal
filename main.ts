@@ -72,9 +72,9 @@ await Main.init();
 Main.initUI();
 
 createRoom();
-// createSphere();
+createSphere();
 // createAOCubes();
-createReflectingCubes();
+// createReflectingCubes();
 // createManyCubes();
 // createManyLights();
 
