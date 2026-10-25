@@ -3,7 +3,7 @@ import { GPUTriangle } from "./gpu-triangle";
 import { BVHNode } from "./BVHNode";
 import { BVHBuilder } from "./BVHBuilder";
 import { GPUAmbient } from "./gpu-ambient";
-import type { GPUSphere } from "./gpu-sphere";
+import { GPUSphere } from "./gpu-sphere";
 import { GPUMaterial } from "./gpu-material";
 
 export class GPUScene {
@@ -35,6 +35,7 @@ export class GPUScene {
 
     public update(scene: THREE.Scene): void {
         this.triangleData.length = 0;
+        this.sphereData.length = 0;
         this.materialData.length = 0;
         this.bvhData.length = 0;
 
@@ -63,49 +64,50 @@ export class GPUScene {
 
     private addMesh(mesh: THREE.Mesh): void {
         const geometry = mesh.geometry;
-
-        if (!(geometry instanceof THREE.BufferGeometry))
-            return;
+        if (!(geometry instanceof THREE.BufferGeometry)) return;
 
         const positions = geometry.getAttribute("position");
-
-        if (!positions)
-            return;
+        if (!positions) return;
 
         if (Array.isArray(mesh.material))
             throw new Error("Multiple materials are not supported yet.");
 
         const material = mesh.material as THREE.MeshPhysicalMaterial;
-
-        const materialId = this.addMaterial(material);
+        const materialId = this.getOrCreateMaterial(material);
 
         const index = geometry.index;
         const world = mesh.matrixWorld;
 
-        if (index) {
-            for (let i = 0; i < index.count; i += 3) {
-                this.tempP0.fromBufferAttribute(positions, index.getX(i)).applyMatrix4(world);
-                this.tempP1.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
-                this.tempP2.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
-                this.tempNormal.crossVectors(
-                    this.tempP1.clone().sub(this.tempP0),
-                    this.tempP2.clone().sub(this.tempP0)
-                ).normalize();
-
-                this.pushTriangle(materialId);
-            }
-
+        if (geometry instanceof THREE.SphereGeometry) {
+            const sphereGeometry: THREE.SphereGeometry = geometry;
+            sphereGeometry.computeBoundingSphere();
+            this.pushSphere(mesh.position, sphereGeometry.boundingSphere?.radius!, materialId);
         } else {
-            for (let i = 0; i < positions.count; i += 3) {
-                this.tempP0.fromBufferAttribute(positions, i).applyMatrix4(world);
-                this.tempP1.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
-                this.tempP2.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
-                this.tempNormal.crossVectors(
-                    this.tempP1.clone().sub(this.tempP0),
-                    this.tempP2.clone().sub(this.tempP0)
-                ).normalize();
+            if (index) {
+                for (let i = 0; i < index.count; i += 3) {
+                    this.tempP0.fromBufferAttribute(positions, index.getX(i    )).applyMatrix4(world);
+                    this.tempP1.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
+                    this.tempP2.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
+                    this.tempNormal.crossVectors(
+                        this.tempP1.clone().sub(this.tempP0),
+                        this.tempP2.clone().sub(this.tempP0)
+                    ).normalize();
 
-                this.pushTriangle(materialId);
+                    this.pushTriangle(materialId);
+                }
+
+            } else {
+                for (let i = 0; i < positions.count; i += 3) {
+                    this.tempP0.fromBufferAttribute(positions, i    ).applyMatrix4(world);
+                    this.tempP1.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
+                    this.tempP2.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
+                    this.tempNormal.crossVectors(
+                        this.tempP1.clone().sub(this.tempP0),
+                        this.tempP2.clone().sub(this.tempP0)
+                    ).normalize();
+
+                    this.pushTriangle(materialId);
+                }
             }
         }
     }
@@ -122,7 +124,11 @@ export class GPUScene {
         );
     }
 
-    private addMaterial(material: THREE.MeshPhysicalMaterial): number {
+    private pushSphere(center: THREE.Vector3, radius: number, materialId: number): void {
+        this.sphereData.push(new GPUSphere().set(center, radius, materialId));
+    }
+
+    private getOrCreateMaterial(material: THREE.MeshPhysicalMaterial): number {
         const existing = this.materialMap.get(material);
 
         if (existing !== undefined) return existing;
@@ -137,6 +143,7 @@ export class GPUScene {
 
     private enqueueBuffers(): void {
         this.enqueueTriangleBuffer();
+        this.enqueueSphereBuffer();
         this.enqueueMaterialBuffer();
         this.enqueueAmbientBuffer();
         this.enqueueBVHBuffer();
@@ -167,6 +174,34 @@ export class GPUScene {
 
         
         this.device.queue.writeBuffer(this.triangleBuffer, 0, triangleArrayBuffer);
+    }
+
+    private enqueueSphereBuffer(): void {
+        const sphereCount = this.sphereData.length;
+        const sphereBufferSize = Math.max(sphereCount, 1) * GPUTriangle.BYTE_SIZE;
+        const sphereArrayBuffer = new ArrayBuffer(sphereBufferSize);
+
+        let byteOffset = 0;
+        for (let i = 0; i < sphereCount; i++) {
+            byteOffset = this.sphereData[i].write(sphereArrayBuffer, byteOffset);
+        }
+
+        if (!this.sphereBuffer || this.sphereBuffer.size < sphereBufferSize) {
+
+            this.sphereBuffer?.destroy();
+
+            this.sphereBuffer =
+                this.device.createBuffer({
+                    size: sphereBufferSize,
+
+                    usage:
+                        GPUBufferUsage.STORAGE |
+                        GPUBufferUsage.COPY_DST
+                });
+        }
+
+        
+        this.device.queue.writeBuffer(this.sphereBuffer, 0, sphereArrayBuffer);
     }
 
     private enqueueMaterialBuffer(): void {

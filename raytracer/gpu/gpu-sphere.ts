@@ -50,7 +50,7 @@ export class GPUSphere implements GPURepresentation {
         return this;
     }
 
-    public write(array: ArrayBuffer, byteOffset = 0): number {
+    public write(array: ArrayBuffer, byteOffset: number = 0): number {
         const view = new DataView(array);
 
         view.setFloat32(byteOffset + 0, this.data[0], true);

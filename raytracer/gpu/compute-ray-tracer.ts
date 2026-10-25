@@ -7,13 +7,14 @@ import randomShader from "./random.wgsl?raw";
 import mainShader from "./main.wgsl?raw";
 import { GPUMaterial } from "./gpu-material";
 import { GPUAmbient } from "./gpu-ambient";
+import { GPUSphere } from "./gpu-sphere";
 
 export class ComputeRayTracer {
     public readonly outputTexture: GPUTexture;
     public readonly postProcessTexture: GPUTexture;
     public readonly gpuTextureView: GPUTextureView;
     public readonly postProcessGpuTextureView: GPUTextureView;
-    private timeBuffer: GPUBuffer | null = null;
+    private timeBuffer: GPUBuffer;
 
     private readonly device: GPUDevice;
     private readonly pipeline: GPUComputePipeline;
@@ -57,24 +58,27 @@ export class ComputeRayTracer {
         // Shader
         // ============================================================
 
+        const shaderCode = `
+            ${GPUCamera.SHADER}
+            ${GPUTriangle.SHADER}
+            ${GPUSphere.SHADER}
+            ${GPUMaterial.SHADER}
+            ${GPUAmbient.SHADER}
+
+            struct Time {
+                value: f32,
+            };
+            
+            ${collisionShader}
+            ${colorConversorShader}
+            ${randomShader}
+            
+            ${mainShader}
+        `
+
         const module =
             device.createShaderModule({
-                code: `
-                    ${GPUCamera.SHADER}
-                    ${GPUTriangle.SHADER}
-                    ${GPUMaterial.SHADER}
-                    ${GPUAmbient.SHADER}
-
-                    struct Time {
-                        value: f32,
-                    };
-
-                    ${collisionShader}
-                    ${colorConversorShader}
-                    ${randomShader}
-                    
-                    ${mainShader}
-                `
+                code: shaderCode
             });
 
         // ============================================================
@@ -83,9 +87,7 @@ export class ComputeRayTracer {
 
         const bindGroupLayout =
             device.createBindGroupLayout({
-
                 entries: [
-
                     {
                         binding: 0,
 
@@ -162,6 +164,18 @@ export class ComputeRayTracer {
 
                         buffer: {
                             type: "uniform"
+                        }
+                    },
+
+                    
+                    {
+                        binding: 7,
+
+                        visibility:
+                            GPUShaderStage.COMPUTE,
+
+                        buffer: {
+                            type: "read-only-storage"
                         }
                     }
                 ]
@@ -370,6 +384,14 @@ export class ComputeRayTracer {
                             buffer: gpuScene.gpuAmbient.buffer
                         }
                     },
+
+                    {
+                        binding: 7,
+                        resource: {
+                            buffer:
+                                gpuScene.sphereBuffer
+                        }
+                    },
                 ]
             }
         );
@@ -397,20 +419,11 @@ export class ComputeRayTracer {
             }
         );
 
-        const encoder =
-            this.device.createCommandEncoder();
+        const encoder = this.device.createCommandEncoder();
+        const pass = encoder.beginComputePass();
 
-        const pass =
-            encoder.beginComputePass();
-
-        pass.setPipeline(
-            this.pipeline
-        );
-
-        pass.setBindGroup(
-            0,
-            bindGroup
-        );
+        pass.setPipeline(this.pipeline);
+        pass.setBindGroup(0, bindGroup);
 
         pass.dispatchWorkgroups(
             Math.ceil(this.width / 8),

@@ -37,6 +37,35 @@ fn intersectRayTriangle(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, triangle:
     return t;
 }
 
+fn intersectSphere(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, sphere: Sphere) -> f32 {
+    let oc = rayOrigin - sphere.center;
+    let radius = sphere.radius;
+
+    let a = dot(rayDirection, rayDirection);
+    let halfB = dot(oc, rayDirection);
+    let c = dot(oc, oc) - radius * radius;
+
+    let discriminant = halfB * halfB - a * c;
+
+    if (discriminant < 0.0) {
+        return -1.0;
+    }
+
+    let sqrtD = sqrt(discriminant);
+    let t1 = (-halfB - sqrtD) / a;
+    let t2 = (-halfB + sqrtD) / a;
+
+    if (t1 > 0.001) {
+        return t1;
+    }
+
+    if (t2 > 0.001) {
+        return t2;
+    }
+
+    return -1.0;
+}
+
 fn rayIntersectionsWithAABB(rayOrigin: vec3<f32>, rayDirection: vec3<f32>, aabbMin: vec3<f32>, aabbMax: vec3<f32>) -> u32 {
     var intersectionsCount = 0u;
 

@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { GPUCamera } from './gpu/gpu-camera';
 import { GPUScene } from './gpu/gpu-scene';
 import { AccumulationPass } from './gpu/accumulation-pass';

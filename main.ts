@@ -167,7 +167,7 @@ function createReflectingCubes() {
 }
 
 function createSphere() {
-    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 64, 64), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 1024, 1024), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     Main.sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
 }
 

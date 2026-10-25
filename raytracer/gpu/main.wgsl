@@ -5,6 +5,7 @@
 @group(0) @binding(4) var<uniform> time: Time;
 @group(0) @binding(5) var<storage, read> bvh : array<BVHNode>;
 @group(0) @binding(6) var<uniform> skyData : SkyData;
+@group(0) @binding(7) var<storage, read> spheres : array<Sphere>;
 
 struct BVHNode {
     min : vec4<f32>,
@@ -81,8 +82,12 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
         for (var cast_index = 0u; cast_index < MAX_RAY_CASTING; cast_index++) {
             last_cast_index = cast_index;
             let intersectionResults = intersectTriangles(origin, direction);
-            
-            if (intersectionResults.count == 0u) {
+            let sphereHit = intersectSpheres(origin, direction);
+
+            let hasTriangle = intersectionResults.count > 0u;
+            let hasSphere = sphereHit.hit;
+
+            if (!hasTriangle && !hasSphere) {
                 let skyColor = skyColor(direction);
                 contribution = 1.0;
                 rayColor += skyColor * contribution;
@@ -90,12 +95,31 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
                 break;
             }
 
-            let intersectionResult = intersectionResults.intersections[0];
-            let triangleIndex = intersectionResult.triangleIndex;
-            let triangle = &triangles[triangleIndex];
-            let material = materials[triangle.materialId];
-            let intersectionPoint = origin + direction * intersectionResult.distance;
+            var material: Material;
+            var normal: vec3<f32>;
+            var distance: f32;
+            var intersectionPoint: vec3<f32>;
 
+            let triangleDistance = select(
+                1e30,
+                intersectionResults.intersections[0].distance,
+                hasTriangle
+            );
+
+            if (hasSphere && sphereHit.distance < triangleDistance) {
+                material = materials[sphereHit.materialId];
+                normal = sphereHit.normal;
+                distance = sphereHit.distance;
+                intersectionPoint = sphereHit.position;
+            } else {
+                let intersectionResult = intersectionResults.intersections[0];
+                let triangle = triangles[intersectionResult.triangleIndex];
+
+                material = materials[triangle.materialId];
+                normal = triangle.normal;
+                distance = intersectionResult.distance;
+                intersectionPoint = origin + direction * distance;
+            }
 
             let lightSourceIntensity = material.properties[2];
             let hittedLightSource = lightSourceIntensity > 0.0;
@@ -108,18 +132,18 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
                 rayColor += material.baseColor.rgb * contribution;
             }
 
-            let frontFace = dot(direction, triangle.normal) < 0.0;
+            let frontFace = dot(direction, normal) < 0.0;
             var usedNormal: vec3<f32>;
             if (frontFace) {
-                usedNormal = triangle.normal;
+                usedNormal = normal;
             } else {
-                usedNormal = -triangle.normal;
+                usedNormal = -normal;
             };
 
             let materialRoughness = material.properties[0];
             
             if (materialRoughness > 0.0) {
-                contribution *= (1 - dot(triangle.normal, -direction)) * (1 - materialRoughness);
+                contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
             } else if (
                 material.baseColor.r == 0.0 &&
                 material.baseColor.g == 0.0 &&
@@ -188,6 +212,14 @@ struct TrianglesIntersectionsResult {
 
 struct RaycastResult {
     intersection: TriangleIntersection,
+};
+
+struct SphereHit {
+    distance: f32,
+    position: vec3<f32>,
+    normal: vec3<f32>,
+    materialId: u32,
+    hit: bool,
 };
 
 // fn intersectTriangles(origin: vec3<f32>, direction: vec3<f32>) -> Intersection {
@@ -363,6 +395,57 @@ fn intersectTriangles(origin: vec3<f32>, direction: vec3<f32>) -> TrianglesInter
         intersections,
         intersectionCount
     );
+}
+
+fn intersectSpheres(
+    origin: vec3<f32>,
+    direction: vec3<f32>
+) -> SphereHit {
+    var closestHit: SphereHit;
+    closestHit.distance = 1e30;
+    closestHit.materialId = 0u;
+    closestHit.position = vec3<f32>(0.0);
+    closestHit.normal = vec3<f32>(0.0);
+    closestHit.hit = false;
+
+    for (var i = 0u; i < arrayLength(&spheres); i++) {
+        let sphere = spheres[i];
+        let oc = origin - sphere.center;
+
+        let a = dot(direction, direction);
+        let b = 2.0 * dot(oc, direction);
+        let c = dot(oc, oc) - sphere.radius * sphere.radius;
+
+        let discriminant = b * b - 4.0 * a * c;
+
+        if (discriminant < 0.0) {
+            continue;
+        }
+
+        let sqrtDiscriminant = sqrt(discriminant);
+        let t0 = (-b - sqrtDiscriminant) / (2.0 * a);
+        let t1 = (-b + sqrtDiscriminant) / (2.0 * a);
+
+        var t = t0;
+
+        if (t < 0.001) {
+            t = t1;
+        }
+
+        if (t < 0.001 || t >= closestHit.distance) {
+            continue;
+        }
+
+        let position = origin + direction * t;
+
+        closestHit.distance = t;
+        closestHit.position = position;
+        closestHit.normal = normalize(position - sphere.center);
+        closestHit.materialId = sphere.materialId;
+        closestHit.hit = true;
+    }
+
+    return closestHit;
 }
 
 fn rayIntersectionsWithAABBChat(
