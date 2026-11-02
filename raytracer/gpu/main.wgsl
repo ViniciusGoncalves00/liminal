@@ -26,7 +26,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
-    const samplesPerPixel = 10u;
+    const samplesPerPixel = 8u;
     var materialLightSourceIntensity = 0.0;
 
     var pixelColor = vec3<f32>(0.0);
@@ -41,10 +41,10 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
         var randomX = random(&seed);
         var randomY = random(&seed);
 
-        var MAX_RAY_CASTING = 6u;
+        var MAX_RAY_CASTING = 8u;
         if (sample == 0u) {
-            randomX = 0.5;
-            randomY = 0.5;
+            randomX = 0.0;
+            randomY = 0.0;
         }
 
         let pixel = vec2<f32>(
@@ -75,12 +75,11 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
         
         var rayColor = vec3<f32>(0.0);
         
-        var last_cast_index = 0u;
+        var casts_to_contribute = 0u;
         var contribution = 1.0;
         var foundLight = false;
 
         for (var cast_index = 0u; cast_index < MAX_RAY_CASTING; cast_index++) {
-            last_cast_index = cast_index;
             let intersectionResults = intersectTriangles(origin, direction);
             let sphereHit = intersectSpheres(origin, direction);
 
@@ -144,49 +143,41 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
             
             if (materialRoughness > 0.0) {
                 contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
-            } else if (
-                material.baseColor.r == 0.0 &&
-                material.baseColor.g == 0.0 &&
-                material.baseColor.b == 0.0
-                ) {
-                cast_index--;
+                casts_to_contribute++;
             }
 
             let originOffset = usedNormal * 0.01;
-            origin = intersectionPoint + originOffset;
-
-            var refractionIndex = material.properties[1];
+            var refractionIndex = material.properties[3];
 
             if (refractionIndex > 0.0) {
                 if (frontFace){
                     refractionIndex = 1.0 / refractionIndex;
-                } else {
-                    refractionIndex = refractionIndex;
                 }
 
-                let cosTheta = dot(-direction, usedNormal);
-                let outRayPerpendicular = refractionIndex * (direction + cosTheta * usedNormal);
-                let cos2Theta = 1.0 - dot(outRayPerpendicular, outRayPerpendicular);
+                let cos_theta = min(dot(-direction, usedNormal), 1.0);
+                let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
-                if (cos2Theta < 0.0) {
-                    direction = reflect(direction, usedNormal);
+                let cannotRefract = refractionIndex * sin_theta > 1.0;
+                let shouldReflect = cannotRefract ||
+                    reflectance(cos_theta, refractionIndex) > random(&seed);
+
+                if (shouldReflect) {
+                    direction = reflectLambertian(direction, usedNormal, materialRoughness, &seed);
+                    origin = intersectionPoint + originOffset;
                 } else {
-                    let outRayParallel = -sqrt(cos2Theta) * usedNormal;
-                    direction = outRayPerpendicular + outRayParallel;
+                    direction = refract(direction, usedNormal, refractionIndex);
+                    origin = intersectionPoint - originOffset;
                 }
             } else {
-                let randomDirection = randomHemisphere(usedNormal, &seed);
-                let randomLambertianDirection = usedNormal + randomDirection;
-                let reflectedDirection = reflect(direction, usedNormal);
-
-                direction = normalize(mix(reflectedDirection, randomLambertianDirection, materialRoughness));
+                direction = reflectLambertian(direction, usedNormal, materialRoughness, &seed);
+                origin = intersectionPoint + originOffset;
             }
         }
 
         if (!foundLight) {
             rayColor = vec3<f32>(0.0);
         }
-        pixelColor += rayColor / f32(last_cast_index + 1u);
+        pixelColor += rayColor / f32(casts_to_contribute + 1u);
     }
 
     pixelColor /= f32(samplesPerPixel);
@@ -198,6 +189,27 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     );
 }
 
+fn reflectLambertian(direction: vec3<f32>, normal: vec3<f32>, roughness: f32, seed: ptr<function, u32>) -> vec3<f32> {
+    let randomDirection = randomHemisphere(normal, seed);
+    let randomLambertianDirection = normal + randomDirection;
+    let reflectedDirection = reflect(direction, normal);
+
+    return normalize(mix(reflectedDirection, randomLambertianDirection, roughness));
+}
+
+fn refract(direction: vec3<f32>, normal: vec3<f32>, refractionIndex: f32) -> vec3<f32> {
+    let cos_theta = min(dot(-direction, normal), 1.0);
+    let r_out_perp = refractionIndex * (direction + cos_theta * normal);
+    let r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * normal;
+
+    return r_out_perp + r_out_parallel;
+}
+
+fn reflectance(cosine: f32, refractionIndex: f32) -> f32 {
+    var r0 = (1.0 - refractionIndex) / (1.0 + refractionIndex);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
+}
 
 struct TriangleIntersection {
     triangleIndex: u32,

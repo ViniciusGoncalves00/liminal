@@ -72,9 +72,11 @@ await Main.init();
 Main.initUI();
 
 createRoom();
-createSphere();
+// createReflectiveSphere();
+createRefractiveSphere();
+// createMirror();
 // createAOCubes();
-// createReflectingCubes();
+// createReflectingObjects();
 // createManyCubes();
 // createManyLights();
 
@@ -108,12 +110,12 @@ function createRoom() {
 
     Main.sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
-    const ceiling = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    const ceiling = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
     ceiling.position.set(0, 2.5, 0);
 
     Main.sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
 
-    const right = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xff0000, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
+    const right = new THREE.Mesh( baseGeometry, new THREE.MeshPhysicalMaterial( { color: 0xff0000, roughness: 0.2, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ) );
     right.position.set(2.5, 0, 0);
     right.rotateZ(THREE.MathUtils.degToRad(90));
 
@@ -148,13 +150,13 @@ function createAOCubes() {
     Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 }
 
-function createReflectingCubes() {
+function createReflectingObjects() {
     const cube = new THREE.Mesh( new THREE.BoxGeometry(2.0, 2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube.position.set(1.0, -1.5, 0.0);
     cube.rotateY(degToRad(15));
     Main.sceneManager.addObject(cube, SceneLayer.Game, SceneLayer.Editor);
 
-    const cube2 = new THREE.Mesh( new THREE.BoxGeometry(1.5, 1.0, 1.5), new THREE.MeshPhysicalMaterial( { color: 0x0000f0, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    const cube2 = new THREE.Mesh( new THREE.SphereGeometry(0.5, 64, 64), new THREE.MeshPhysicalMaterial( { color: 0x0000f0, roughness: 0.5, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
     cube2.position.set(-1.0, -1.95, 1.0);
     cube2.rotateY(degToRad(-15));
     Main.sceneManager.addObject(cube2, SceneLayer.Game, SceneLayer.Editor);
@@ -166,9 +168,35 @@ function createReflectingCubes() {
     Main.sceneManager.addObject(cube3, SceneLayer.Game, SceneLayer.Editor);
 }
 
-function createSphere() {
-    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 1024, 1024), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+function createReflectiveSphere() {
+    const sphere = new THREE.Mesh( new THREE.SphereGeometry(1.0, 16, 16), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    sphere.position.set(0, 0, -1.0);
     Main.sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
+
+    const plafon = new THREE.Mesh( new THREE.BoxGeometry(1.0, 0.01, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, emissive: 0xf0f0f0, emissiveIntensity: 1.0 } ) );
+    plafon.position.set(0, 2.445, 0);
+    Main.sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
+}
+
+function createRefractiveSphere() {
+    const sphere = new THREE.Mesh( new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshPhysicalMaterial({ color: 0xff00ff, roughness: 0.1, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    sphere.position.set(0, 0.55, -1.0);
+    Main.sceneManager.addObject(sphere, SceneLayer.Game, SceneLayer.Editor);
+
+    const mirror = new THREE.Mesh( new THREE.BoxGeometry(4.0, 4.0, 0.05), new THREE.MeshPhysicalMaterial( { color: 0xaaaaaa, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 2.417 } ));
+    mirror.rotateX(degToRad(90));
+    Main.sceneManager.addObject(mirror);
+
+    const plafon = new THREE.Mesh( new THREE.BoxGeometry(1.0, 0.01, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, emissive: 0xf0f0f0, emissiveIntensity: 1.0 } ) );
+    plafon.position.set(0, 2.445, 0);
+    Main.sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
+}
+
+function createMirror() {
+    const mirror = new THREE.Mesh( new THREE.PlaneGeometry(2.0, 2.0), new THREE.MeshPhysicalMaterial( { color: 0x000000, roughness: 0.0, metalness: 0.0, emissiveIntensity: 0.0, ior: 0.0 } ));
+    mirror.rotateX(degToRad(30));
+    mirror.position.set(0, -1.5, 0);
+    Main.sceneManager.addObject(mirror);
 }
 
 function createManyCubes() {
