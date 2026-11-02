@@ -23,23 +23,24 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     }
 
     let TEXTURE_SIZE = vec2<f32>(f32(textureSize.x), f32(textureSize.y));
-    const SAMPLES_PER_PIXEL = 8u;
-    const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(SAMPLES_PER_PIXEL)));
-    const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL  = 1u / SQUAREROOT_SAMPLES_PER_PIXEL;
+    const TARGET_SAMPLES_PER_PIXEL = 16u;
+    const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(TARGET_SAMPLES_PER_PIXEL)));
+    const AFFECTIVE_SAMPLES_PER_PIXEL = SQUAREROOT_SAMPLES_PER_PIXEL * SQUAREROOT_SAMPLES_PER_PIXEL;
+    const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL = 1.0 / f32(SQUAREROOT_SAMPLES_PER_PIXEL);
     const MAX_BOUNCES = 8u;
 
     var pixelColor = vec3<f32>(0.0);
 
-    for (var s_j = 0u; s_j < SQUAREROOT_SAMPLES_PER_PIXEL; s_j++) {
-        for (var s_i = 0u; s_i < SQUAREROOT_SAMPLES_PER_PIXEL; s_i++) {
-            let sample = s_j * SQUAREROOT_SAMPLES_PER_PIXEL + s_i;
+    for (var s_i = 0u; s_i < SQUAREROOT_SAMPLES_PER_PIXEL; s_i++) {
+        for (var s_j = 0u; s_j < SQUAREROOT_SAMPLES_PER_PIXEL; s_j++) {
+            let sample = s_i * SQUAREROOT_SAMPLES_PER_PIXEL + s_j;
             var seed = id.x + id.y * textureSize.x + sample * 1973u;
-            var stratifiedPixel = sampleStratifiedSquare(s_i, s_j, f32(RECIP_SQUAREROOT_SAMPLES_PER_PIXEL), &seed);
+            var stratifiedPixel = sampleStratifiedSquare(s_i, s_j, RECIP_SQUAREROOT_SAMPLES_PER_PIXEL, &seed);
 
-            if (sample == 0u) {
-                stratifiedPixel.x = 0.0;
-                stratifiedPixel.y = 0.0;
-            }
+            // if (sample == 0u) {
+            //     stratifiedPixel.x = 0.0;
+            //     stratifiedPixel.y = 0.0;
+            // }
 
             let pixel = vec2<f32>(
                 f32(id.x) + stratifiedPixel.x,
@@ -50,8 +51,8 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
             pixelColor += ray.color;
         }
     }
-
-    pixelColor /= f32(SAMPLES_PER_PIXEL);
+    
+    pixelColor /= f32(AFFECTIVE_SAMPLES_PER_PIXEL);
 
     textureStore(
         outputTexture,
