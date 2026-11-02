@@ -121,6 +121,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
             }
 
             let lightSourceIntensity = material.properties[2];
+            var refractionIndex = material.properties[3];
             let hittedLightSource = lightSourceIntensity > 0.0;
 
             if (hittedLightSource) {
@@ -141,15 +142,14 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
 
             let materialRoughness = material.properties[0];
             
-            if (materialRoughness > 0.0) {
+            if (materialRoughness > 0.0 || refractionIndex > 1.0) {
                 contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
                 casts_to_contribute++;
             }
 
             let originOffset = usedNormal * 0.01;
-            var refractionIndex = material.properties[3];
 
-            if (refractionIndex > 0.0) {
+            if (refractionIndex > 1.0) {
                 if (frontFace){
                     refractionIndex = 1.0 / refractionIndex;
                 }
@@ -158,11 +158,10 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
                 let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
                 let cannotRefract = refractionIndex * sin_theta > 1.0;
-                let shouldReflect = cannotRefract ||
-                    reflectance(cos_theta, refractionIndex) > random(&seed);
+                let shouldReflect = cannotRefract || reflectance(cos_theta, refractionIndex) > random(&seed);
 
                 if (shouldReflect) {
-                    direction = reflectLambertian(direction, usedNormal, materialRoughness, &seed);
+                    direction = reflect(direction, usedNormal);
                     origin = intersectionPoint + originOffset;
                 } else {
                     direction = refract(direction, usedNormal, refractionIndex);

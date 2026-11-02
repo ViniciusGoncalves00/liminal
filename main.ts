@@ -187,7 +187,7 @@ function createRefractiveSphere() {
     mirror.rotateX(degToRad(90));
     Main.sceneManager.addObject(mirror);
 
-    const plafon = new THREE.Mesh( new THREE.BoxGeometry(1.0, 0.01, 1.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, emissive: 0xf0f0f0, emissiveIntensity: 1.0 } ) );
+    const plafon = new THREE.Mesh( new THREE.BoxGeometry(3.0, 0.01, 3.0), new THREE.MeshPhysicalMaterial( { color: 0xf0f0f0, emissive: 0xf0f0f0, emissiveIntensity: 1.0 } ) );
     plafon.position.set(0, 2.445, 0);
     Main.sceneManager.addObject(plafon, SceneLayer.Game, SceneLayer.Editor);
 }
