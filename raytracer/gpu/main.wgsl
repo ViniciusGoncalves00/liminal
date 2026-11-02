@@ -24,28 +24,31 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
 
     let TEXTURE_SIZE = vec2<f32>(f32(textureSize.x), f32(textureSize.y));
     const SAMPLES_PER_PIXEL = 8u;
+    const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(SAMPLES_PER_PIXEL)));
+    const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL  = 1u / SQUAREROOT_SAMPLES_PER_PIXEL;
     const MAX_BOUNCES = 8u;
 
     var pixelColor = vec3<f32>(0.0);
 
-    for (var sample = 0u; sample < SAMPLES_PER_PIXEL; sample++) {
-        var seed = id.x + id.y * textureSize.x + sample * 1973u;
+    for (var s_j = 0u; s_j < SQUAREROOT_SAMPLES_PER_PIXEL; s_j++) {
+        for (var s_i = 0u; s_i < SQUAREROOT_SAMPLES_PER_PIXEL; s_i++) {
+            let sample = s_j * SQUAREROOT_SAMPLES_PER_PIXEL + s_i;
+            var seed = id.x + id.y * textureSize.x + sample * 1973u;
+            var stratifiedPixel = sampleStratifiedSquare(s_i, s_j, f32(RECIP_SQUAREROOT_SAMPLES_PER_PIXEL), &seed);
 
-        var randomX = random(&seed);
-        var randomY = random(&seed);
+            if (sample == 0u) {
+                stratifiedPixel.x = 0.0;
+                stratifiedPixel.y = 0.0;
+            }
 
-        if (sample == 0u) {
-            randomX = 0.0;
-            randomY = 0.0;
+            let pixel = vec2<f32>(
+                f32(id.x) + stratifiedPixel.x,
+                f32(id.y) + stratifiedPixel.y
+            );
+
+            let ray = castRay(pixel, TEXTURE_SIZE, MAX_BOUNCES, &seed);
+            pixelColor += ray.color;
         }
-
-        let pixel = vec2<f32>(
-            f32(id.x) + randomX,
-            f32(id.y) + randomY
-        );
-
-        let ray = castRay(pixel, TEXTURE_SIZE, MAX_BOUNCES, &seed);
-        pixelColor += ray.color;
     }
 
     pixelColor /= f32(SAMPLES_PER_PIXEL);
@@ -210,6 +213,13 @@ fn reflectance(cosine: f32, refractionIndex: f32) -> f32 {
 
 fn pointAtRay(ray: Ray, t: f32) -> vec3<f32> {
     return ray.origin + ray.direction * t;
+}
+
+fn sampleStratifiedSquare(x: u32, y: u32, recip_sqrt_spp: f32, seed: ptr<function, u32>) -> vec2<f32> {
+    let px = ((f32(x) + random(seed)) * recip_sqrt_spp) - 0.5;
+    let py = ((f32(y) + random(seed)) * recip_sqrt_spp) - 0.5;
+
+    return vec2<f32>(px, py);
 }
 
 struct TriangleIntersection {
