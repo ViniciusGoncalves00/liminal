@@ -233,68 +233,6 @@ struct SphereHit {
     hit: bool,
 };
 
-// fn intersectTriangles(origin: vec3<f32>, direction: vec3<f32>) -> Intersection {
-//     var closestDistance = 1e30;
-//     var hitMaterialId = 0u;
-//     var hitNormal = vec3<f32>(0.0);
-
-//     var hitTriangle: Triangle;
-
-//     let triangleCount = arrayLength(&triangles);
-
-//     for (var i = 0u; i < triangleCount; i++) {
-//         let triangle = triangles[i];
-
-//         var triangleNormal = vec3<f32>(0.0);
-
-//         let currentDistance = intersectRayTriangle(
-//             origin,
-//             direction,
-//             triangle,
-//             &triangleNormal
-//         );
-
-//         if (currentDistance > 0.0 && currentDistance < closestDistance) {
-//             closestDistance = currentDistance;
-//             hitMaterialId = triangle.materialId;
-//             hitNormal = triangleNormal;
-//             hitTriangle = triangle;
-//         }
-//     }
-
-//     let point = origin + direction * closestDistance;
-
-//     // if distance is still -1.0, it means we didn't hit anything, so we can return a default intersection
-//     return Intersection(
-//         point,
-//         closestDistance,
-//         hitNormal,
-//         hitMaterialId
-//     );
-// }
-
-// fn skyColor(direction: vec3<f32>) -> vec3<f32> {
-//     let intensity = abs(direction.y);
-//     let sunDirection = skyData.sunDirection;
-//     let sunSize = skyData.sunIntensity;
-
-//     var dot = dot(direction, sunDirection);
-//     if (dot > 0.0) {
-//         dot = pow(dot, 1000.0);
-//     } else {
-//         dot = 0.0;
-//     }
-
-//     let darkBlue = vec3<f32>(0.10, 0.25, 0.50);
-//     let lightBlue = vec3<f32>(0.25, 0.55, 0.85);
-//     let sunColor = vec3<f32>(1.0 * sunSize, 1.0 * sunSize, 1.0 * sunSize);
-
-//     var skyColor = mix(lightBlue, darkBlue, intensity);
-//     skyColor = mix(skyColor, sunColor, dot);
-
-//     return skyColor;
-// }
-
 fn skyColor(rayDirection: vec3<f32>) -> vec3<f32> {
     var rayDot = abs(dot(rayDirection, vec3<f32>(0, 1, 0)));
     var skyColor = mix(skyData.horizonColor, skyData.zenithColor, rayDot);
