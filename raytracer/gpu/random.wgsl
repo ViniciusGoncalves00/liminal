@@ -37,7 +37,6 @@ fn randomHemisphere(
     normal: vec3<f32>,
     seed: ptr<function, u32>
 ) -> vec3<f32> {
-
     var direction = randomUnitVector(seed);
 
     if (dot(direction, normal) < 0.0) {

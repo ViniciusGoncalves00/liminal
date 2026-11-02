@@ -22,26 +22,18 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
         return;
     }
 
-    let size = vec2<f32>(textureSize);
-    let scale = camera.params.x;
-    let aspect = camera.params.y;
-
-    const samplesPerPixel = 8u;
-    var materialLightSourceIntensity = 0.0;
+    let TEXTURE_SIZE = vec2<f32>(f32(textureSize.x), f32(textureSize.y));
+    const SAMPLES_PER_PIXEL = 8u;
+    const MAX_BOUNCES = 8u;
 
     var pixelColor = vec3<f32>(0.0);
 
-    for (var sample = 0u; sample < samplesPerPixel; sample++) {
+    for (var sample = 0u; sample < SAMPLES_PER_PIXEL; sample++) {
         var seed = id.x + id.y * textureSize.x + sample * 1973u;
-        
-        // --------------------------------------------------------
-        // Subpixel jitter
-        // --------------------------------------------------------
 
         var randomX = random(&seed);
         var randomY = random(&seed);
 
-        var MAX_RAY_CASTING = 8u;
         if (sample == 0u) {
             randomX = 0.0;
             randomY = 0.0;
@@ -52,140 +44,146 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
             f32(id.y) + randomY
         );
 
-        // --------------------------------------------------------
-        // Pixel -> NDC
-        // --------------------------------------------------------
-
-        var uv = pixel / size;
-        uv = uv * 2.0 - 1.0;
-        uv.y = -uv.y;
-        uv.x *= aspect;
-        uv *= scale;
-
-        // --------------------------------------------------------
-        // Ray
-        // --------------------------------------------------------
-
-        var origin = camera.position.xyz;
-        var direction = normalize(
-            camera.forward.xyz +
-            uv.x * camera.right.xyz +
-            uv.y * camera.up.xyz
-        );
-        
-        var rayColor = vec3<f32>(0.0);
-        
-        var casts_to_contribute = 0u;
-        var contribution = 1.0;
-        var foundLight = false;
-
-        for (var cast_index = 0u; cast_index < MAX_RAY_CASTING; cast_index++) {
-            let intersectionResults = intersectTriangles(origin, direction);
-            let sphereHit = intersectSpheres(origin, direction);
-
-            let hasTriangle = intersectionResults.count > 0u;
-            let hasSphere = sphereHit.hit;
-
-            if (!hasTriangle && !hasSphere) {
-                let skyColor = skyColor(direction);
-                contribution = 1.0;
-                rayColor += skyColor * contribution;
-                foundLight = true;
-                break;
-            }
-
-            var material: Material;
-            var normal: vec3<f32>;
-            var distance: f32;
-            var intersectionPoint: vec3<f32>;
-
-            let triangleDistance = select(
-                1e30,
-                intersectionResults.intersections[0].distance,
-                hasTriangle
-            );
-
-            if (hasSphere && sphereHit.distance < triangleDistance) {
-                material = materials[sphereHit.materialId];
-                normal = sphereHit.normal;
-                distance = sphereHit.distance;
-                intersectionPoint = sphereHit.position;
-            } else {
-                let intersectionResult = intersectionResults.intersections[0];
-                let triangle = triangles[intersectionResult.triangleIndex];
-
-                material = materials[triangle.materialId];
-                normal = triangle.normal;
-                distance = intersectionResult.distance;
-                intersectionPoint = origin + direction * distance;
-            }
-
-            let lightSourceIntensity = material.properties[2];
-            var refractionIndex = material.properties[3];
-            let hittedLightSource = lightSourceIntensity > 0.0;
-
-            if (hittedLightSource) {
-                rayColor += material.baseColor.rgb * lightSourceIntensity;
-                foundLight = true;
-                break;
-            } else {
-                rayColor += material.baseColor.rgb * contribution;
-            }
-
-            let frontFace = dot(direction, normal) < 0.0;
-            var usedNormal: vec3<f32>;
-            if (frontFace) {
-                usedNormal = normal;
-            } else {
-                usedNormal = -normal;
-            };
-
-            let materialRoughness = material.properties[0];
-            
-            if (materialRoughness > 0.0 || refractionIndex > 1.0) {
-                contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
-                casts_to_contribute++;
-            }
-
-            let originOffset = usedNormal * 0.01;
-
-            if (refractionIndex > 1.0) {
-                if (frontFace){
-                    refractionIndex = 1.0 / refractionIndex;
-                }
-
-                let cos_theta = min(dot(-direction, usedNormal), 1.0);
-                let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
-
-                let cannotRefract = refractionIndex * sin_theta > 1.0;
-                let shouldReflect = cannotRefract || reflectance(cos_theta, refractionIndex) > random(&seed);
-
-                if (shouldReflect) {
-                    direction = reflect(direction, usedNormal);
-                    origin = intersectionPoint + originOffset;
-                } else {
-                    direction = refract(direction, usedNormal, refractionIndex);
-                    origin = intersectionPoint - originOffset;
-                }
-            } else {
-                direction = reflectLambertian(direction, usedNormal, materialRoughness, &seed);
-                origin = intersectionPoint + originOffset;
-            }
-        }
-
-        if (!foundLight) {
-            rayColor = vec3<f32>(0.0);
-        }
-        pixelColor += rayColor / f32(casts_to_contribute + 1u);
+        let ray = castRay(pixel, TEXTURE_SIZE, MAX_BOUNCES, &seed);
+        pixelColor += ray.color;
     }
 
-    pixelColor /= f32(samplesPerPixel);
+    pixelColor /= f32(SAMPLES_PER_PIXEL);
 
     textureStore(
         outputTexture,
         vec2<i32>(id.xy),
         vec4<f32>(pixelColor, 1.0)
     );
+}
+
+fn castRay(pixel: vec2<f32>, textureSize: vec2<f32>, maxBounces: u32, seed: ptr<function, u32>) -> Ray {
+    let scale = camera.params.x;
+    let aspect = camera.params.y;
+
+    var uv = pixel / textureSize;
+    uv = uv * 2.0 - 1.0;
+    uv.y = -uv.y;
+    uv.x *= aspect;
+    uv *= scale;
+
+    var origin = camera.position.xyz;
+    var direction = normalize(
+        camera.forward.xyz +
+        uv.x * camera.right.xyz +
+        uv.y * camera.up.xyz
+    );
+    
+    var ray: Ray = Ray(
+        origin,
+        direction,
+        vec3<f32>(0.0)
+    );
+        
+    var casts_to_contribute = 0u;
+    var contribution = 1.0;
+    var foundLight = false;
+
+    for (var cast_index = 0u; cast_index < maxBounces; cast_index++) {
+        let intersectionResults = intersectTriangles(origin, direction);
+        let sphereHit = intersectSpheres(origin, direction);
+
+        let hasTriangle = intersectionResults.count > 0u;
+        let hasSphere = sphereHit.hit;
+
+        if (!hasTriangle && !hasSphere) {
+            let skyColor = skyColor(direction);
+            contribution = 1.0;
+            ray.color += skyColor * contribution;
+            foundLight = true;
+            break;
+        }
+
+        var material: Material;
+        var normal: vec3<f32>;
+        var distance: f32;
+        var intersectionPoint: vec3<f32>;
+
+        let triangleDistance = select(
+            1e30,
+            intersectionResults.intersections[0].distance,
+            hasTriangle
+        );
+
+        if (hasSphere && sphereHit.distance < triangleDistance) {
+            material = materials[sphereHit.materialId];
+            normal = sphereHit.normal;
+            distance = sphereHit.distance;
+            intersectionPoint = sphereHit.position;
+        } else {
+            let intersectionResult = intersectionResults.intersections[0];
+            let triangle = triangles[intersectionResult.triangleIndex];
+
+            material = materials[triangle.materialId];
+            normal = triangle.normal;
+            distance = intersectionResult.distance;
+            intersectionPoint = origin + direction * distance;
+        }
+
+        let lightSourceIntensity = material.properties[2];
+        var refractionIndex = material.properties[3];
+        let hittedLightSource = lightSourceIntensity > 0.0;
+
+        if (hittedLightSource) {
+            ray.color += material.baseColor.rgb * lightSourceIntensity;
+            foundLight = true;
+            break;
+        } else {
+            ray.color += material.baseColor.rgb * contribution;
+        }
+
+        let frontFace = dot(direction, normal) < 0.0;
+        var usedNormal: vec3<f32>;
+        if (frontFace) {
+            usedNormal = normal;
+        } else {
+            usedNormal = -normal;
+        };
+
+        let materialRoughness = material.properties[0];
+            
+        if (materialRoughness > 0.0 || refractionIndex > 1.0) {
+            contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
+            casts_to_contribute++;
+        }
+
+        let originOffset = usedNormal * 0.01;
+
+        if (refractionIndex > 1.0) {
+            if (frontFace){
+                refractionIndex = 1.0 / refractionIndex;
+            }
+
+            let cos_theta = min(dot(-direction, usedNormal), 1.0);
+            let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+            let cannotRefract = refractionIndex * sin_theta > 1.0;
+            let shouldReflect = cannotRefract || reflectance(cos_theta, refractionIndex) > random(seed);
+
+            if (shouldReflect) {
+                direction = reflect(direction, usedNormal);
+                origin = intersectionPoint + originOffset;
+            } else {
+                direction = refract(direction, usedNormal, refractionIndex);
+                origin = intersectionPoint - originOffset;
+            }
+        } else {
+            direction = reflectLambertian(direction, usedNormal, materialRoughness, seed);
+            origin = intersectionPoint + originOffset;
+        }
+    }
+
+    if (!foundLight) {
+        ray.color = vec3<f32>(0.0);
+    }
+
+    ray.color /= f32(casts_to_contribute + 1u);
+    return ray;
 }
 
 fn reflectLambertian(direction: vec3<f32>, normal: vec3<f32>, roughness: f32, seed: ptr<function, u32>) -> vec3<f32> {
@@ -210,9 +208,19 @@ fn reflectance(cosine: f32, refractionIndex: f32) -> f32 {
     return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
+fn pointAtRay(ray: Ray, t: f32) -> vec3<f32> {
+    return ray.origin + ray.direction * t;
+}
+
 struct TriangleIntersection {
     triangleIndex: u32,
     distance: f32,
+};
+
+struct Ray {
+    origin: vec3<f32>,
+    direction: vec3<f32>,
+    color: vec3<f32>,
 };
 
 const MAX_INTERSECTIONS = 16u;
