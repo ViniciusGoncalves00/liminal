@@ -6,7 +6,8 @@ import type { GPUAmbient } from "./raytracer/gpu/gpu-ambient";
 import type { Ambient } from "./raytracer/ambient";
 import { degToRad } from "three/src/math/MathUtils.js";
 
-const fps = document.getElementById('fps') as HTMLDivElement;
+const averageFpsCounter = document.getElementById('average fps') as HTMLDivElement;
+const instantaneousFpsCounter = document.getElementById('instantaneous fps') as HTMLDivElement;
 
 class Main {
     public static sceneManager: SceneManager;
@@ -81,13 +82,26 @@ createRefractiveSphere();
 // createManyLights();
 
 let lastTime = 0;
+let fpsHistoric: number[] = [];
+var fpsHistoricIndex = 0;
+
 const loop = (time: number) => {
     requestAnimationFrame(loop);
 
     const deltaTime = (time - lastTime) / 1000;
+    const fps = 1000 / (time - lastTime);
+    fpsHistoric[fpsHistoricIndex] = fps;
+    fpsHistoricIndex++;
+    if (fpsHistoricIndex >= 15) {
+        fpsHistoricIndex = 0;
+    }
+
+    const avgFps = fpsHistoric.reduce((a, b) => a + b, 0) / fpsHistoric.length;
+    
     Main.sceneManager.animate(deltaTime);
     
-    fps.innerText = deltaTime.toFixed(0) + " FPS";
+    averageFpsCounter.innerText = avgFps.toFixed(0) + " Average FPS";
+    instantaneousFpsCounter.innerText = fps.toFixed(0) + " Instantaneous FPS";
 
     lastTime = time;
     // const sunDirection = new THREE.Vector3(Math.sin(time * 0.001), 1.0, Math.cos(time * 0.001)).normalize();
