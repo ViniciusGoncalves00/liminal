@@ -34,7 +34,6 @@ export class BVHBuilder {
             box.expandByPoint(triangle.p0);
             box.expandByPoint(triangle.p1);
             box.expandByPoint(triangle.p2);
-            // this.expandBounds(node, triangle);
         }
 
         node.min.copy(box.min);
