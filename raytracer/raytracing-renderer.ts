@@ -1,8 +1,8 @@
-import { GPUCamera } from './gpu/gpu-camera';
-import { GPUScene } from './gpu/gpu-scene';
-import { AccumulationPass } from './gpu/accumulation-pass';
-import { ComputeRayTracer } from './gpu/compute-ray-tracer';
-import { PresentPass } from './gpu/present-pass';
+import { GPUCamera } from "./gpu/gpu-camera";
+import { GPUScene } from "./gpu/gpu-scene";
+import { AccumulationPass } from "./gpu/accumulation-pass";
+import { ComputeRayTracer } from "./gpu/compute-ray-tracer";
+import { PresentPass } from "./gpu/present-pass";
 
 export class RayTracingRenderer {
     private readonly computeRayTracing: ComputeRayTracer;
@@ -22,11 +22,9 @@ export class RayTracingRenderer {
     public render(gpuScene: GPUScene, gpuCamera: GPUCamera) {
         this.computeRayTracing.render(gpuCamera, gpuScene);
         this.presentPass.render(this.computeRayTracing.postProcessTexture);
-        
+
         this.accumulationPass.nextFrame();
     }
 
-    public setSize(width: number, height: number, updateStyle: boolean = true): void {
-        
-    }
+    public setSize(width: number, height: number, updateStyle: boolean = true): void {}
 }

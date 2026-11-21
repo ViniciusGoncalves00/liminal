@@ -13,7 +13,7 @@ export class Ambient {
         this.horizonColor.set(r, g, b);
         return this;
     }
-    
+
     public setZenithColor(r: number, g: number, b: number): Ambient {
         this.zenithColor.set(r, g, b);
         return this;
@@ -28,7 +28,7 @@ export class Ambient {
         this.sunIntensity = v;
         return this;
     }
-    
+
     public setSunDirection(x: number, y: number, z: number): Ambient {
         this.sunDirection.set(x, y, z);
         return this;

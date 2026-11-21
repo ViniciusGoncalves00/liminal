@@ -1,27 +1,28 @@
 {
-  "name": "liminal",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "alpinejs": "^3.15.2",
-    "lil-gui": "^0.21.0",
-    "three": "^0.185.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/three": "^0.185.0",
-    "@webgpu/types": "^0.1.71",
-    "tailwindcss": "~4.3.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.12"
-  }
+    "name": "liminal",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "alpinejs": "^3.15.2",
+        "lil-gui": "^0.21.0",
+        "three": "^0.185.1"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.3.0",
+        "@types/three": "^0.185.0",
+        "@webgpu/types": "^0.1.71",
+        "prettier": "^3.10.1",
+        "tailwindcss": "~4.3.0",
+        "typescript": "~6.0.2",
+        "vite": "^8.0.12"
+    }
 }

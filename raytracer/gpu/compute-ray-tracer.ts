@@ -23,11 +23,7 @@ export class ComputeRayTracer {
     private readonly width: number;
     private readonly height: number;
 
-    public constructor(
-        device: GPUDevice,
-        width: number,
-        height: number
-    ) {
+    public constructor(device: GPUDevice, width: number, height: number) {
         this.device = device;
         this.width = width;
         this.height = height;
@@ -36,16 +32,13 @@ export class ComputeRayTracer {
         // Output
         // ============================================================
 
-        this.outputTexture =
-            device.createTexture({
-                size: [width, height],
+        this.outputTexture = device.createTexture({
+            size: [width, height],
 
-                format: "rgba16float",
+            format: "rgba16float",
 
-                usage:
-                    GPUTextureUsage.STORAGE_BINDING |
-                    GPUTextureUsage.TEXTURE_BINDING
-            });
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+        });
 
         this.timeBuffer = this.device.createBuffer({
             size: 4,
@@ -74,144 +67,125 @@ export class ComputeRayTracer {
             ${randomShader}
             
             ${mainShader}
-        `
+        `;
 
-        const module =
-            device.createShaderModule({
-                code: shaderCode
-            });
+        const module = device.createShaderModule({
+            code: shaderCode,
+        });
 
         // ============================================================
         // Bind group layout
         // ============================================================
 
-        const bindGroupLayout =
-            device.createBindGroupLayout({
-                entries: [
-                    {
-                        binding: 0,
+        const bindGroupLayout = device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "uniform"
-                        }
+                    buffer: {
+                        type: "uniform",
                     },
+                },
 
-                    {
-                        binding: 1,
+                {
+                    binding: 1,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "read-only-storage"
-                        }
+                    buffer: {
+                        type: "read-only-storage",
                     },
+                },
 
-                    {
-                        binding: 2,
+                {
+                    binding: 2,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "read-only-storage"
-                        }
+                    buffer: {
+                        type: "read-only-storage",
                     },
+                },
 
-                    {
-                        binding: 3,
+                {
+                    binding: 3,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        storageTexture: {
-                            access: "write-only",
-                            format: "rgba16float",
-                            viewDimension: "2d"
-                        }
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba16float",
+                        viewDimension: "2d",
                     },
+                },
 
-                    {
-                        binding: 4,
+                {
+                    binding: 4,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "uniform"
-                        }
+                    buffer: {
+                        type: "uniform",
                     },
+                },
 
-                    {
-                        binding: 5,
+                {
+                    binding: 5,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "read-only-storage"
-                        }
+                    buffer: {
+                        type: "read-only-storage",
                     },
+                },
 
-                    {
-                        binding: 6,
+                {
+                    binding: 6,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "uniform"
-                        }
+                    buffer: {
+                        type: "uniform",
                     },
+                },
 
-                    
-                    {
-                        binding: 7,
+                {
+                    binding: 7,
 
-                        visibility:
-                            GPUShaderStage.COMPUTE,
+                    visibility: GPUShaderStage.COMPUTE,
 
-                        buffer: {
-                            type: "read-only-storage"
-                        }
-                    }
-                ]
-            });
+                    buffer: {
+                        type: "read-only-storage",
+                    },
+                },
+            ],
+        });
 
-        const pipelineLayout =
-            device.createPipelineLayout({
-                bindGroupLayouts: [
-                    bindGroupLayout
-                ]
-            });
+        const pipelineLayout = device.createPipelineLayout({
+            bindGroupLayouts: [bindGroupLayout],
+        });
 
-        this.pipeline =
-            device.createComputePipeline({
+        this.pipeline = device.createComputePipeline({
+            layout: pipelineLayout,
 
-                layout: pipelineLayout,
-
-                compute: {
-                    module,
-                    entryPoint: "main"
-                }
-            });
+            compute: {
+                module,
+                entryPoint: "main",
+            },
+        });
 
         this.postProcessTexture = device.createTexture({
             size: [width, height],
             format: "rgba16float",
-            usage:
-                GPUTextureUsage.STORAGE_BINDING |
-                GPUTextureUsage.TEXTURE_BINDING
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
         });
 
         this.postProcessGpuTextureView = this.postProcessTexture.createView();
 
-        const postProcessModule =
-            device.createShaderModule({
-                code: `
+        const postProcessModule = device.createShaderModule({
+            code: `
                     ${colorConversorShader}
 
                     @group(0) @binding(0)
@@ -261,11 +235,10 @@ export class ComputeRayTracer {
                             textureLoad(inputTexture, vec2<i32>(id.xy), 0)
                         );
                     }
-                `
-            });
+                `,
+        });
 
-        const postProcessBindGroupLayout =
-            device.createBindGroupLayout({
+        const postProcessBindGroupLayout = device.createBindGroupLayout({
             entries: [
                 {
                     binding: 0,
@@ -273,8 +246,8 @@ export class ComputeRayTracer {
 
                     texture: {
                         sampleType: "float",
-                        viewDimension: "2d"
-                    }
+                        viewDimension: "2d",
+                    },
                 },
 
                 {
@@ -284,140 +257,113 @@ export class ComputeRayTracer {
                     storageTexture: {
                         access: "write-only",
                         format: "rgba16float",
-                        viewDimension: "2d"
-                    }
-                }
-            ]
+                        viewDimension: "2d",
+                    },
+                },
+            ],
         });
 
-        const postProcessPipelineLayout =
-            device.createPipelineLayout({
-                bindGroupLayouts: [
-                    postProcessBindGroupLayout
-                ]
-            });
-        
-        this.postProcessPipeline =
-            device.createComputePipeline({
-                layout: postProcessPipelineLayout,
-            
-                compute: {
-                    module: postProcessModule,
-                    entryPoint: "main"
-                }
-            });
+        const postProcessPipelineLayout = device.createPipelineLayout({
+            bindGroupLayouts: [postProcessBindGroupLayout],
+        });
+
+        this.postProcessPipeline = device.createComputePipeline({
+            layout: postProcessPipelineLayout,
+
+            compute: {
+                module: postProcessModule,
+                entryPoint: "main",
+            },
+        });
     }
 
-    public render(
-        gpuCamera: GPUCamera,
-        gpuScene: GPUScene
-    ): void {
+    public render(gpuCamera: GPUCamera, gpuScene: GPUScene): void {
         const time = performance.now() / 1000;
 
-        this.device?.queue.writeBuffer(
-            this.timeBuffer!,
-            0,
-            new Float32Array([time])
-        );
+        this.device?.queue.writeBuffer(this.timeBuffer!, 0, new Float32Array([time]));
 
-        const bindGroup =
-            this.device.createBindGroup({
+        const bindGroup = this.device.createBindGroup({
+            layout: this.pipeline.getBindGroupLayout(0),
 
-                layout:
-                    this.pipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
 
-                entries: [
-
-                    {
-                        binding: 0,
-
-                        resource: {
-                            buffer:
-                                gpuCamera.buffer
-                        }
+                    resource: {
+                        buffer: gpuCamera.buffer,
                     },
+                },
 
-                    {
-                        binding: 1,
+                {
+                    binding: 1,
 
-                        resource: {
-                            buffer:
-                                gpuScene.triangleBuffer
-                        }
+                    resource: {
+                        buffer: gpuScene.triangleBuffer,
                     },
+                },
 
-                    {
-                        binding: 2,
+                {
+                    binding: 2,
 
-                        resource: {
-                            buffer:
-                                gpuScene.materialBuffer
-                        }
+                    resource: {
+                        buffer: gpuScene.materialBuffer,
                     },
+                },
 
-                    {
-                        binding: 3,
+                {
+                    binding: 3,
 
-                        resource:
-                            this.gpuTextureView
-                    },
+                    resource: this.gpuTextureView,
+                },
 
-                    {
-                        binding: 4,
+                {
+                    binding: 4,
 
-                        resource: {
-                            buffer:
-                                this.timeBuffer
-                        }
+                    resource: {
+                        buffer: this.timeBuffer,
                     },
+                },
 
-                    {
-                        binding: 5,
-                        resource: {
-                            buffer: gpuScene.bvhBuffer
-                        }
+                {
+                    binding: 5,
+                    resource: {
+                        buffer: gpuScene.bvhBuffer,
                     },
-                    
-                    {
-                        binding: 6,
-                        resource: {
-                            buffer: gpuScene.gpuAmbient.buffer
-                        }
-                    },
+                },
 
-                    {
-                        binding: 7,
-                        resource: {
-                            buffer:
-                                gpuScene.sphereBuffer
-                        }
+                {
+                    binding: 6,
+                    resource: {
+                        buffer: gpuScene.gpuAmbient.buffer,
                     },
-                ]
-            }
-        );
-        
-        const postProcessBindGroup =
-            this.device.createBindGroup({
-                layout:
-                    this.postProcessPipeline.getBindGroupLayout(0),
-            
-                entries: [
-                    {
-                        binding: 0,
-                    
-                        resource:
-                            this.outputTexture.createView()
+                },
+
+                {
+                    binding: 7,
+                    resource: {
+                        buffer: gpuScene.sphereBuffer,
                     },
-                
-                    {
-                        binding: 1,
-                    
-                        resource:
-                            this.postProcessGpuTextureView
-                    }
-                ]
-            }
-        );
+                },
+            ],
+        });
+
+        const postProcessBindGroup = this.device.createBindGroup({
+            layout: this.postProcessPipeline.getBindGroupLayout(0),
+
+            entries: [
+                {
+                    binding: 0,
+
+                    resource: this.outputTexture.createView(),
+                },
+
+                {
+                    binding: 1,
+
+                    resource: this.postProcessGpuTextureView,
+                },
+            ],
+        });
 
         const encoder = this.device.createCommandEncoder();
         const pass = encoder.beginComputePass();
@@ -425,34 +371,20 @@ export class ComputeRayTracer {
         pass.setPipeline(this.pipeline);
         pass.setBindGroup(0, bindGroup);
 
-        pass.dispatchWorkgroups(
-            Math.ceil(this.width / 8),
-            Math.ceil(this.height / 8)
-        );
+        pass.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8));
 
         pass.end();
 
-        const postProcessPass =
-            encoder.beginComputePass();
+        const postProcessPass = encoder.beginComputePass();
 
-        postProcessPass.setPipeline(
-            this.postProcessPipeline
-        );
+        postProcessPass.setPipeline(this.postProcessPipeline);
 
-        postProcessPass.setBindGroup(
-            0,
-            postProcessBindGroup
-        );
+        postProcessPass.setBindGroup(0, postProcessBindGroup);
 
-        postProcessPass.dispatchWorkgroups(
-            Math.ceil(this.width / 8),
-            Math.ceil(this.height / 8)
-        );
+        postProcessPass.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8));
 
         postProcessPass.end();
 
-        this.device.queue.submit([
-            encoder.finish()
-        ]);
+        this.device.queue.submit([encoder.finish()]);
     }
 }

@@ -5,16 +5,16 @@ import type { BVHBuildResult } from "./BVHResult";
 
 export class BVHBuilder {
     public build(triangles: GPUTriangle[]): BVHBuildResult {
-        const nodes: BVHNode[] = []
+        const nodes: BVHNode[] = [];
         const indices = triangles.map((_, i) => i);
 
         this.buildNode(triangles, indices, 0, indices.length, nodes);
 
-        const reorderedTriangles = indices.map(index => triangles[index]);
+        const reorderedTriangles = indices.map((index) => triangles[index]);
 
         return {
             nodes,
-            triangles: reorderedTriangles
+            triangles: reorderedTriangles,
         };
     }
 
@@ -47,7 +47,6 @@ export class BVHBuilder {
         const MAX_TRIANGLES = 4;
 
         if (count <= MAX_TRIANGLES) {
-
             node.firstTriangle = start;
             node.triangleCount = count;
 
@@ -56,13 +55,7 @@ export class BVHBuilder {
 
         // 3. escolhe eixo
 
-        const axis =
-            this.chooseSplitAxis(
-                triangles,
-                indices,
-                start,
-                end
-            );
+        const axis = this.chooseSplitAxis(triangles, indices, start, end);
 
         // 4. ordena
 
@@ -96,7 +89,7 @@ export class BVHBuilder {
     }
 
     private chooseSplitAxis(triangles: GPUTriangle[], indices: number[], start: number, end: number): 0 | 1 | 2 {
-        const min = new THREE.Vector3( Infinity,  Infinity,  Infinity);
+        const min = new THREE.Vector3(Infinity, Infinity, Infinity);
         const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
 
         for (let i = start; i < end; i++) {

@@ -24,14 +24,11 @@ export class GPUCamera {
     public constructor(device: GPUDevice) {
         this.device = device;
 
-        this.buffer =
-            device.createBuffer({
-                size: GPUCamera.BYTE_SIZE,
+        this.buffer = device.createBuffer({
+            size: GPUCamera.BYTE_SIZE,
 
-                usage:
-                    GPUBufferUsage.UNIFORM |
-                    GPUBufferUsage.COPY_DST
-            });
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
     }
 
     public update(camera: THREE.PerspectiveCamera, aspect: number) {
@@ -68,13 +65,9 @@ export class GPUCamera {
             halfFovScale,
             aspect,
             0,
-            0
+            0,
         ]);
 
-        this.device.queue.writeBuffer(
-            this.buffer,
-            0,
-            this.data
-        );
+        this.device.queue.writeBuffer(this.buffer, 0, this.data);
     }
 }

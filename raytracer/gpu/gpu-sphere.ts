@@ -50,19 +50,19 @@ export class GPUSphere implements GPURepresentation {
         return this;
     }
 
-    public write(array: ArrayBuffer, byteOffset: number = 0): number {
-        const view = new DataView(array);
+    public write(buffer: ArrayBuffer, byteOffset: number = 0): number {
+        const view = new DataView(buffer);
 
-        view.setFloat32(byteOffset + 0, this.data[0], true);
-        view.setFloat32(byteOffset + 4, this.data[1], true);
-        view.setFloat32(byteOffset + 8, this.data[2], true);
-        view.setFloat32(byteOffset + 12, this.data[3], true);
-        view.setUint32(byteOffset + 16, this.data[4], true);
+        view.setFloat32((byteOffset += 0), this.data[0], true);
+        view.setFloat32((byteOffset += 4), this.data[1], true);
+        view.setFloat32((byteOffset += 4), this.data[2], true);
+        view.setFloat32((byteOffset += 4), this.data[3], true);
+        view.setUint32((byteOffset += 4), this.data[4], true);
 
-        view.setUint32(byteOffset + 20, 0, true);
-        view.setUint32(byteOffset + 24, 0, true);
-        view.setUint32(byteOffset + 28, 0, true);
+        view.setUint32((byteOffset += 4), 0, true);
+        view.setUint32((byteOffset += 4), 0, true);
+        view.setUint32((byteOffset += 4), 0, true);
 
-        return byteOffset + GPUSphere.BYTE_SIZE;
+        return byteOffset;
     }
 }

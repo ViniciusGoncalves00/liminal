@@ -1,4 +1,3 @@
-
 import * as THREE from "three";
 import type { GPURepresentation } from "./gpu-representation";
 
@@ -84,18 +83,10 @@ export class GPUTriangle implements GPURepresentation {
         const view = new DataView(buffer);
 
         for (let i = 0; i < 15; i++) {
-            view.setFloat32(
-                byteOffset + i * Float32Array.BYTES_PER_ELEMENT,
-                this.data[i],
-                true
-            );
+            view.setFloat32(byteOffset + i * Float32Array.BYTES_PER_ELEMENT, this.data[i], true);
         }
 
-        view.setUint32(
-            byteOffset + 15 * Float32Array.BYTES_PER_ELEMENT,
-            this.data[15],
-            true
-        );
+        view.setUint32(byteOffset + 15 * Float32Array.BYTES_PER_ELEMENT, this.data[15], true);
 
         return byteOffset + GPUTriangle.BYTE_SIZE;
     }

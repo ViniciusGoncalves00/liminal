@@ -1,17 +1,17 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { RayTracingRenderer } from './raytracer/raytracing-renderer';
-import { GPUScene } from './raytracer/gpu/gpu-scene';
-import { GPUCamera } from './raytracer/gpu/gpu-camera';
-import { Ambient } from './raytracer/ambient';
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { RayTracingRenderer } from "./raytracer/raytracing-renderer";
+import { GPUScene } from "./raytracer/gpu/gpu-scene";
+import { GPUCamera } from "./raytracer/gpu/gpu-camera";
+import { Ambient } from "./raytracer/ambient";
 
 export const SceneLayer = {
     Game: 0,
     Editor: 1,
 };
 
-export type SceneLayer = typeof SceneLayer[keyof typeof SceneLayer];
+export type SceneLayer = (typeof SceneLayer)[keyof typeof SceneLayer];
 
 export class SceneManager {
     private editorCanvas: HTMLCanvasElement;
@@ -33,8 +33,8 @@ export class SceneManager {
     public ambient: Ambient = new Ambient();
 
     public constructor(device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat, editorElement?: HTMLCanvasElement, gameElement?: HTMLCanvasElement) {
-        this.editorCanvas = editorElement ?? this.createCanvas('editor-view');
-        this.gameCanvas = gameElement ?? this.createCanvas('game-view');
+        this.editorCanvas = editorElement ?? this.createCanvas("editor-view");
+        this.gameCanvas = gameElement ?? this.createCanvas("game-view");
 
         this.threeScene = new THREE.Scene();
         this.gpuScene = new GPUScene(device);
@@ -43,9 +43,9 @@ export class SceneManager {
         this.setFogColor(1.0, 1.0, 1.0);
         this.setfogSpreadness(10.0);
         this.setHorizonColor(0.25, 0.55, 0.85);
-        this.setZenithColor(0.10, 0.25, 0.50);
+        this.setZenithColor(0.1, 0.25, 0.5);
 
-        this.editorRenderer = new THREE.WebGLRenderer({canvas: this.editorCanvas})
+        this.editorRenderer = new THREE.WebGLRenderer({ canvas: this.editorCanvas });
         this.gameRenderer = new RayTracingRenderer(device, context, format, this.gameCanvas);
 
         this.resize();
@@ -64,21 +64,15 @@ export class SceneManager {
         this.gameCamera.layers.enable(SceneLayer.Game);
         this.gameCamera.layers.disable(SceneLayer.Editor);
 
-        this.editorControls = new OrbitControls(
-            this.editorCamera,
-            this.editorRenderer.domElement
-        );
-        
-        this.gameControls = new OrbitControls(
-            this.gameCamera,
-            this.gameCanvas
-        );
+        this.editorControls = new OrbitControls(this.editorCamera, this.editorRenderer.domElement);
+
+        this.gameControls = new OrbitControls(this.gameCamera, this.gameCanvas);
 
         new TransformControls(this.editorCamera, this.editorRenderer.domElement);
 
         this.createHelpers();
 
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener("resize", () => this.resize());
     }
 
     public animate(deltaTime: number): void {
@@ -103,25 +97,18 @@ export class SceneManager {
             object.layers.enable(SceneLayer.Game);
             object.layers.enable(SceneLayer.Editor);
         } else {
-            layers.forEach(layer => object.layers.enable(layer));
+            layers.forEach((layer) => object.layers.enable(layer));
         }
 
         this.threeScene.add(object);
         this.gpuScene.update(this.threeScene);
     }
 
-    public addChildObject(
-        object: THREE.Object3D,
-        parent: THREE.Object3D,
-        ...layers: SceneLayer[]
-    ): void {
-
+    public addChildObject(object: THREE.Object3D, parent: THREE.Object3D, ...layers: SceneLayer[]): void {
         object.layers.disableAll();
 
-        if (layers.length === 0)
-            object.layers.enable(SceneLayer.Game);
-        else
-            layers.forEach(layer => object.layers.enable(layer));
+        if (layers.length === 0) object.layers.enable(SceneLayer.Game);
+        else layers.forEach((layer) => object.layers.enable(layer));
 
         parent.add(object);
     }
@@ -134,7 +121,7 @@ export class SceneManager {
         this.ambient.setHorizonColor(r, g, b);
         this.gpuScene.gpuAmbient.setHorizonColor(r, g, b);
     }
-    
+
     public setZenithColor(r: number, g: number, b: number): void {
         this.ambient.setZenithColor(r, g, b);
         this.gpuScene.gpuAmbient.setZenithColor(r, g, b);
@@ -149,9 +136,9 @@ export class SceneManager {
         this.ambient.setfogSpreadness(v);
         this.gpuScene.gpuAmbient.setfogSpreadness(v);
     }
-    
+
     public setSunDirection(x: number, y: number, z: number): void {
-        this.threeScene.getObjectByName("sun")?.lookAt(x, y ,z);
+        this.threeScene.getObjectByName("sun")?.lookAt(x, y, z);
         this.ambient.setSunDirection(x, y, z);
         this.gpuScene.gpuAmbient.setSunDirection(x, y, z);
     }
@@ -162,7 +149,7 @@ export class SceneManager {
     }
 
     private createCanvas(id: string): HTMLCanvasElement {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.id = id;
         document.body.appendChild(canvas);
         return canvas;
@@ -190,12 +177,7 @@ export class SceneManager {
     }
 
     private createGameCamera(): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(
-            45,
-            this.gameCanvas.clientWidth / this.gameCanvas.clientHeight,
-            0.1,
-            10000
-        );
+        const camera = new THREE.PerspectiveCamera(45, this.gameCanvas.clientWidth / this.gameCanvas.clientHeight, 0.1, 10000);
 
         camera.position.set(0, 0, 5);
         camera.lookAt(0, 0, 0);
@@ -204,12 +186,7 @@ export class SceneManager {
     }
 
     private createEditorCamera(): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            this.editorCanvas.clientWidth / this.editorCanvas.clientHeight,
-            0.1,
-            10000
-        );
+        const camera = new THREE.PerspectiveCamera(75, this.editorCanvas.clientWidth / this.editorCanvas.clientHeight, 0.1, 10000);
 
         camera.position.set(2, 2, 2);
         camera.lookAt(0, 0, 0);

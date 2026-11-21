@@ -56,7 +56,7 @@ export class PresentPass {
                 fn fsMain(in:VSOut)->@location(0) vec4<f32>{
                     return textureSample(img,samp,in.uv);
                 }
-            `
+            `,
         });
 
         this.pipeline = device.createRenderPipeline({
@@ -64,7 +64,7 @@ export class PresentPass {
 
             vertex: {
                 module: shader,
-                entryPoint: "vsMain"
+                entryPoint: "vsMain",
             },
 
             fragment: {
@@ -72,50 +72,49 @@ export class PresentPass {
                 entryPoint: "fsMain",
                 targets: [
                     {
-                        format
-                    }
-                ]
+                        format,
+                    },
+                ],
             },
-            primitive:{
-                topology: "triangle-list"
-            }
+            primitive: {
+                topology: "triangle-list",
+            },
         });
-
     }
 
-    public render(texture: GPUTexture){
+    public render(texture: GPUTexture) {
         const sampler = this.device.createSampler({
-            magFilter:"nearest",
-            minFilter:"nearest"
+            magFilter: "nearest",
+            minFilter: "nearest",
         });
 
         const bindGroup = this.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [
                 {
-                    binding:0,
-                    resource:texture.createView()
+                    binding: 0,
+                    resource: texture.createView(),
                 },
                 {
-                    binding:1,
-                    resource:sampler
-                }
-            ]
+                    binding: 1,
+                    resource: sampler,
+                },
+            ],
         });
 
-        const encoder=this.device.createCommandEncoder();
-        const pass=encoder.beginRenderPass({
-            colorAttachments:[
+        const encoder = this.device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [
                 {
-                    view:this.context.getCurrentTexture().createView(),
-                    loadOp:"clear",
-                    storeOp:"store"
-                }
-            ]
+                    view: this.context.getCurrentTexture().createView(),
+                    loadOp: "clear",
+                    storeOp: "store",
+                },
+            ],
         });
 
         pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0,bindGroup);
+        pass.setBindGroup(0, bindGroup);
         pass.draw(6);
         pass.end();
 

@@ -33,7 +33,7 @@ export class GPUAmbient {
         this.device = device;
         this.buffer = this.device.createBuffer({
             size: GPUAmbient.BYTE_SIZE,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
         this.horizonColor[0] = horizonColor ? horizonColor.r : 1;
