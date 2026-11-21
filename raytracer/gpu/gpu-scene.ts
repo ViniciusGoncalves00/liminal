@@ -27,56 +27,42 @@ export class GPUScene {
     private readonly tempP1 = new THREE.Vector3();
     private readonly tempP2 = new THREE.Vector3();
     private readonly tempNormal = new THREE.Vector3();
-    private readonly tempEdge1 = new THREE.Vector3();
-    private readonly tempEdge2 = new THREE.Vector3();
-
-    private readonly builder = new BVHBuilder();
-    private readonly meshes = new Set<THREE.Mesh>();
-    private bvhDirty = true;
-    private buffersDirty = true;
 
     public constructor(device: GPUDevice) {
         this.device = device;
         this.gpuAmbient = new GPUAmbient(device);
     }
 
-    public update(scene?: THREE.Scene): void {
-        if (scene) {
-            scene.updateMatrixWorld(true);
+    public update(scene: THREE.Scene): void {
+        this.triangleData.length = 0;
+        this.sphereData.length = 0;
+        this.materialData.length = 0;
+        this.bvhData.length = 0;
 
-            scene.traverse(object => {
-                if (object instanceof THREE.Mesh) {
-                    this.addMesh(object);
-                }
-            });
-        }
+        this.materialMap.clear();
 
-        if (!this.bvhDirty && !this.buffersDirty)
-            return;
+        scene.updateMatrixWorld(true);
 
-        if (this.bvhDirty) {
-            const result = this.builder.build(this.triangleData);
+        scene.traverse(object => {
+            if (!(object instanceof THREE.Mesh))
+                    return;
 
-            this.bvhData = result.nodes;
+                this.addMesh(object);
+            }
+        );
 
-            this.triangleData.length = 0;
-            this.triangleData.push(...result.triangles);
+        const builder = new BVHBuilder();
+        const result = builder.build(this.triangleData);
 
-            this.bvhDirty = false;
-        }
+        this.bvhData = result.nodes;
 
-        if (this.buffersDirty) {
-            this.enqueueBuffers();
-            this.buffersDirty = false;
-        }
+        this.triangleData.length = 0;
+        this.triangleData.push(...result.triangles);
+
+        this.enqueueBuffers();
     }
 
-    public addMesh(mesh: THREE.Mesh): void {
-        if (this.meshes.has(mesh))
-            return;
-
-        mesh.updateMatrixWorld(true);
-
+    private addMesh(mesh: THREE.Mesh): void {
         const geometry = mesh.geometry;
         if (!(geometry instanceof THREE.BufferGeometry)) return;
 
@@ -89,41 +75,41 @@ export class GPUScene {
         const material = mesh.material as THREE.MeshPhysicalMaterial;
         const materialId = this.getOrCreateMaterial(material);
 
+        const index = geometry.index;
+        const world = mesh.matrixWorld;
+
         if (geometry instanceof THREE.SphereGeometry) {
-            geometry.computeBoundingSphere();
-
-            const sphere = geometry.boundingSphere!;
-            const worldCenter = sphere.center.clone().applyMatrix4(mesh.matrixWorld);
-
-            this.pushSphere(worldCenter, sphere.radius, materialId);
+            const sphereGeometry: THREE.SphereGeometry = geometry;
+            sphereGeometry.computeBoundingSphere();
+            this.pushSphere(mesh.position, sphereGeometry.boundingSphere?.radius!, materialId);
         } else {
-            const index = geometry.index;
-            const vertexCount = index?.count ?? positions.count;
+            if (index) {
+                for (let i = 0; i < index.count; i += 3) {
+                    this.tempP0.fromBufferAttribute(positions, index.getX(i    )).applyMatrix4(world);
+                    this.tempP1.fromBufferAttribute(positions, index.getX(i + 1)).applyMatrix4(world);
+                    this.tempP2.fromBufferAttribute(positions, index.getX(i + 2)).applyMatrix4(world);
+                    this.tempNormal.crossVectors(
+                        this.tempP1.clone().sub(this.tempP0),
+                        this.tempP2.clone().sub(this.tempP0)
+                    ).normalize();
 
-            for (let i = 0; i < vertexCount; i += 3) {
-                const i0 = index?.getX(i) ?? i;
-                const i1 = index?.getX(i + 1) ?? i + 1;
-                const i2 = index?.getX(i + 2) ?? i + 2;
+                    this.pushTriangle(materialId);
+                }
 
-                this.tempP0.fromBufferAttribute(positions, i0).applyMatrix4(mesh.matrixWorld);
-                this.tempP1.fromBufferAttribute(positions, i1).applyMatrix4(mesh.matrixWorld);
-                this.tempP2.fromBufferAttribute(positions, i2).applyMatrix4(mesh.matrixWorld);
+            } else {
+                for (let i = 0; i < positions.count; i += 3) {
+                    this.tempP0.fromBufferAttribute(positions, i    ).applyMatrix4(world);
+                    this.tempP1.fromBufferAttribute(positions, i + 1).applyMatrix4(world);
+                    this.tempP2.fromBufferAttribute(positions, i + 2).applyMatrix4(world);
+                    this.tempNormal.crossVectors(
+                        this.tempP1.clone().sub(this.tempP0),
+                        this.tempP2.clone().sub(this.tempP0)
+                    ).normalize();
 
-                this.tempEdge1.subVectors(this.tempP1, this.tempP0);
-                this.tempEdge2.subVectors(this.tempP2, this.tempP0);
-
-                this.tempNormal
-                    .crossVectors(this.tempEdge1, this.tempEdge2)
-                    .normalize();
-
-                this.pushTriangle(materialId);
+                    this.pushTriangle(materialId);
+                }
             }
         }
-
-        this.meshes.add(mesh);
-
-        this.bvhDirty = true;
-        this.buffersDirty = true;
     }
 
     private pushTriangle(materialId: number): void {
@@ -269,20 +255,5 @@ export class GPUScene {
         this.gpuAmbient.write(skyArrayBuffer, 0);
 
         this.device.queue.writeBuffer(this.gpuAmbient.buffer, 0, skyArrayBuffer);
-    }
-
-    public clear(): void {
-        this.meshes.clear();
-        this.materialMap.clear();
-        
-        this.triangleData.length = 0;
-        this.sphereData.length = 0;
-        this.materialData.length = 0;
-        this.bvhData.length = 0;
-        
-        this.bvhDirty = true;
-        this.buffersDirty = true;
-        
-        this.update();
     }
 }
