@@ -7,13 +7,6 @@
 @group(0) @binding(6) var<uniform> skyData : SkyData;
 @group(0) @binding(7) var<storage, read> spheres : array<Sphere>;
 
-struct BVHNode {
-    min : vec4<f32>,
-    max : vec4<f32>,
-    data : vec4<u32>,
-    padding : vec4<u32>,
-};
-
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     let textureSize = textureDimensions(outputTexture);

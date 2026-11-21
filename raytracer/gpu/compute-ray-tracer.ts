@@ -8,6 +8,7 @@ import mainShader from "./main.wgsl?raw";
 import { GPUMaterial } from "./gpu-material";
 import { GPUAmbient } from "./gpu-ambient";
 import { GPUSphere } from "./gpu-sphere";
+import { BVHNode } from "./BVHNode";
 
 export class ComputeRayTracer {
     public readonly outputTexture: GPUTexture;
@@ -57,6 +58,7 @@ export class ComputeRayTracer {
             ${GPUSphere.SHADER}
             ${GPUMaterial.SHADER}
             ${GPUAmbient.SHADER}
+            ${BVHNode.SHADER}
 
             struct Time {
                 value: f32,
