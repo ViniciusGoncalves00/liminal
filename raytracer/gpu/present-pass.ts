@@ -23,6 +23,12 @@ export class PresentPass {
                     uv:vec2<f32>
                 }
 
+                @group(0) @binding(0)
+                var image:texture_2d<f32>;
+
+                @group(0) @binding(1)
+                var sample:sampler;
+
                 @vertex
                 fn vsMain(@builtin(vertex_index) vertexIndex:u32)->VSOut {
                     var pos = array<vec2<f32>,6>(
@@ -51,12 +57,6 @@ export class PresentPass {
                     out.uv = uv[vertexIndex];
                     return out;
                 }
-
-                @group(0) @binding(0)
-                var image:texture_2d<f32>;
-
-                @group(0) @binding(1)
-                var sample:sampler;
 
                 @fragment
                 fn fsMain(in:VSOut)->@location(0) vec4<f32>{
