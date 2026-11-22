@@ -20,7 +20,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(TARGET_SAMPLES_PER_PIXEL)));
     const AFFECTIVE_SAMPLES_PER_PIXEL = SQUAREROOT_SAMPLES_PER_PIXEL * SQUAREROOT_SAMPLES_PER_PIXEL;
     const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL = 1.0 / f32(SQUAREROOT_SAMPLES_PER_PIXEL);
-    const MAX_BOUNCES = 6u;
+    const MAX_BOUNCES = 4u;
 
     var pixelColor = vec3<f32>(0.0);
 
@@ -176,10 +176,15 @@ fn castRay(
             // Dielétrico ideal: sem absorção.
         } else {
 
-            direction = reflectLambertian(
-                direction,
+            // direction = reflectLambertian(
+            //     direction,
+            //     usedNormal,
+            //     roughness,
+            //     seed
+            // );
+
+            direction = randomLambertian(
                 usedNormal,
-                roughness,
                 seed
             );
 
