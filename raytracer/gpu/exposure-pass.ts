@@ -1,4 +1,3 @@
-
 export class ExposurePass {
     private readonly context: GPUCanvasContext;
     private readonly device: GPUDevice;
@@ -18,11 +17,7 @@ export class ExposurePass {
     private readonly workgroupSize = 8;
     private readonly reductionSize = 256;
 
-    public constructor(
-        device: GPUDevice,
-        context: GPUCanvasContext,
-        format: GPUTextureFormat
-    ) {
+    public constructor(device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat) {
         this.device = device;
         this.context = context;
 
@@ -37,22 +32,14 @@ export class ExposurePass {
 
         this.exposureBuffer = device.createBuffer({
             size: 16,
-            usage:
-                GPUBufferUsage.STORAGE |
-                GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
-        this.device.queue.writeBuffer(
-            this.exposureBuffer,
-            0,
-            new Float32Array([1.0, 0.0, 0.0, 0.0])
-        );
+        this.device.queue.writeBuffer(this.exposureBuffer, 0, new Float32Array([1.0, 0.0, 0.0, 0.0]));
 
         this.paramsBuffer = device.createBuffer({
             size: 32,
-            usage:
-                GPUBufferUsage.UNIFORM |
-                GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
         // =====================================================
@@ -434,30 +421,20 @@ export class ExposurePass {
     // RENDER
     // =========================================================
 
-    public render(
-        texture: GPUTexture,
-        deltaTime: number
-    ) {
+    public render(texture: GPUTexture, deltaTime: number) {
         const width = texture.width;
         const height = texture.height;
 
-        const groupsX = Math.ceil(
-            width / this.workgroupSize
-        );
+        const groupsX = Math.ceil(width / this.workgroupSize);
 
-        const groupsY = Math.ceil(
-            height / this.workgroupSize
-        );
+        const groupsY = Math.ceil(height / this.workgroupSize);
 
         const partialCount = groupsX * groupsY;
 
         // Allocate or resize partial buffer.
         const requiredSize = partialCount * 16;
 
-        if (
-            !this.partialBuffer ||
-            this.partialBufferSize < requiredSize
-        ) {
+        if (!this.partialBuffer || this.partialBufferSize < requiredSize) {
             this.partialBuffer?.destroy();
 
             this.partialBuffer = this.device.createBuffer({
@@ -474,17 +451,13 @@ export class ExposurePass {
         const floats = new Float32Array(paramsData);
 
         floats[0] = deltaTime;
-        floats[1] = 3.0;   // Speed to adapt to brighter scenes.
-        floats[2] = 1.5;   // Speed to adapt to darker scenes.
-        floats[3] = 1.0;   // Minimum exposure.
-        floats[4] = 5.0;   // Maximum exposure.
-        floats[5] = 0.18;  // Middle gray.
+        floats[1] = 3.0; // Speed to adapt to brighter scenes.
+        floats[2] = 1.5; // Speed to adapt to darker scenes.
+        floats[3] = 1.0; // Minimum exposure.
+        floats[4] = 5.0; // Maximum exposure.
+        floats[5] = 0.18; // Middle gray.
 
-        this.device.queue.writeBuffer(
-            this.paramsBuffer,
-            0,
-            paramsData
-        );
+        this.device.queue.writeBuffer(this.paramsBuffer, 0, paramsData);
 
         // =====================================================
         // BIND GROUPS
@@ -588,9 +561,7 @@ export class ExposurePass {
             const pass = encoder.beginRenderPass({
                 colorAttachments: [
                     {
-                        view: this.context
-                            .getCurrentTexture()
-                            .createView(),
+                        view: this.context.getCurrentTexture().createView(),
 
                         loadOp: "clear",
                         storeOp: "store",
@@ -606,9 +577,7 @@ export class ExposurePass {
             pass.end();
         }
 
-        this.device.queue.submit([
-            encoder.finish(),
-        ]);
+        this.device.queue.submit([encoder.finish()]);
     }
 
     public dispose() {
