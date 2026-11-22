@@ -1,4 +1,5 @@
 import colorConversorShader from "./color.wgsl?raw";
+import randomShader from "./random.wgsl?raw";
 
 export class PostProcessPass {
     public readonly outputTexture: GPUTexture;
@@ -35,6 +36,7 @@ export class PostProcessPass {
         const module = device.createShaderModule({
             code: `
                 ${colorConversorShader}
+                ${randomShader}
 
                 @group(0) @binding(0)
                 var inputTexture: texture_2d<f32>;
@@ -46,11 +48,11 @@ export class PostProcessPass {
                 fn main(
                     @builtin(global_invocation_id) id: vec3<u32>
                 ) {
-                    let size = textureDimensions(outputTexture);
+                    let textureSize = textureDimensions(outputTexture);
 
                     if (
-                        id.x >= size.x ||
-                        id.y >= size.y
+                        id.x >= textureSize.x ||
+                        id.y >= textureSize.y
                     ) {
                         return;
                     }
@@ -66,27 +68,35 @@ export class PostProcessPass {
                     let hsv = rgbToHsv(color.rgb);
                     let value = hsv[2];
 
-                    if (value < 0.5 || value > 0.5) {
-                        var sum = vec4<f32>(0.0);
+                    var sum = vec4<f32>(0.0);
+                    var sumCount = 0;
 
-                        for (var x = -1i; x <= 1i; x++) {
-                            for (var y = -1i; y <= 1i; y++) {
-                                let p = clamp(
-                                    pixel + vec2<i32>(x, y),
-                                    vec2<i32>(0),
-                                    vec2<i32>(size) - 1
-                                );
+                    for (var x = -1i; x <= 1; x++) {
+                        for (var y = -1i; y <= 1i; y++) {
+                            sumCount++;
+                            
+                            var seed = id.x + id.y * textureSize.x * 1973u;
+                            
+                            let randomPixel = vec2<i32>(
+                                i32(f32(id.x) + random(&seed) * 2),
+                                i32(f32(id.y) + random(&seed) * 2)
+                            );
 
-                                sum += textureLoad(
-                                    inputTexture,
-                                    p,
-                                    0
-                                );
-                            }
+                            let p = clamp(
+                                randomPixel,
+                                vec2<i32>(0),
+                                vec2<i32>(textureSize) - 1
+                            );
+
+                            sum += textureLoad(
+                                inputTexture,
+                                p,
+                                0
+                            );
                         }
-
-                        color = sum / 9.0;
                     }
+
+                    color += sum / f32(sumCount);
 
                     textureStore(
                         outputTexture,

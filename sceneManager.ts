@@ -29,6 +29,8 @@ export class SceneManager {
 
     private editorControls: OrbitControls;
     private gameControls: OrbitControls;
+    private previousPosition: THREE.Vector3 = new THREE.Vector3();
+    private previousQuaternion: THREE.Quaternion = new THREE.Quaternion();
 
     public ambient: Ambient = new Ambient();
 
@@ -76,6 +78,8 @@ export class SceneManager {
     }
 
     public animate(deltaTime: number): void {
+        this.hasCameraMoved();
+
         this.editorControls.update(deltaTime);
         this.gameControls.update(deltaTime);
 
@@ -215,5 +219,18 @@ export class SceneManager {
 
         const lightHelper = new THREE.DirectionalLightHelper(light, 5);
         this.addObject(lightHelper, SceneLayer.Editor);
+    }
+
+    private hasCameraMoved(): void {
+        const positionChanged = !this.gameCamera.position.equals(this.previousPosition);
+        const rotationChanged = !this.gameCamera.quaternion.equals(this.previousQuaternion);
+        
+        if (positionChanged || rotationChanged) {
+            const event = new Event("cameraHasMoved");
+            window.dispatchEvent(event);
+        }
+
+        this.previousPosition.copy(this.gameCamera.position);
+        this.previousQuaternion.copy(this.gameCamera.quaternion);
     }
 }
