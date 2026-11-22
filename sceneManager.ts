@@ -83,7 +83,7 @@ export class SceneManager {
         this.gpuCamera.update(this.gameCamera, this.gameCanvas.width / this.gameCanvas.height);
 
         this.editorRenderer.render(this.threeScene, this.editorCamera);
-        this.gameRenderer.render(this.gpuScene, this.gpuCamera);
+        this.gameRenderer.render(deltaTime, this.gpuScene, this.gpuCamera);
     }
 
     /**
