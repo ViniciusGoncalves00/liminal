@@ -2,10 +2,17 @@ export class PresentPass {
     private readonly context: GPUCanvasContext;
     private readonly device: GPUDevice;
     private readonly pipeline: GPURenderPipeline;
+    private readonly sampler: GPUSampler;
+    private bindGroup?: GPUBindGroup;
+    private currentTexture?: GPUTexture;
 
     public constructor(device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat) {
         this.device = device;
         this.context = context;
+        this.sampler = this.device.createSampler({
+            magFilter: "linear",
+            minFilter: "linear",
+        });
 
         const shader = device.createShaderModule({
             code: `
@@ -20,41 +27,41 @@ export class PresentPass {
                 @vertex
                 fn vsMain(@builtin(vertex_index) vertexIndex:u32)->VSOut {
                     var pos = array<vec2<f32>,6>(
-                        vec2(-1,-1),
-                        vec2(1,-1),
-                        vec2(-1,1),
+                        vec2(-1, -1),
+                        vec2( 1, -1),
+                        vec2(-1,  1),
 
-                        vec2(-1,1),
-                        vec2(1,-1),
-                        vec2(1,1)
+                        vec2(-1,  1),
+                        vec2( 1, -1),
+                        vec2( 1,  1)
                     );
 
                     var uv = array<vec2<f32>,6>(
-                        vec2(0,1),
-                        vec2(1,1),
-                        vec2(0,0),
+                        vec2(0, 1),
+                        vec2(1, 1),
+                        vec2(0, 0),
 
-                        vec2(0,0),
-                        vec2(1,1),
-                        vec2(1,0)
+                        vec2(0, 0),
+                        vec2(1, 1),
+                        vec2(1, 0)
 
                     );
 
                     var out:VSOut;
-                    out.position = vec4(pos[vertexIndex],0,1);
+                    out.position = vec4(pos[vertexIndex], 0, 1);
                     out.uv = uv[vertexIndex];
                     return out;
                 }
 
                 @group(0) @binding(0)
-                var img:texture_2d<f32>;
+                var image:texture_2d<f32>;
 
                 @group(0) @binding(1)
-                var samp:sampler;
+                var sample:sampler;
 
                 @fragment
                 fn fsMain(in:VSOut)->@location(0) vec4<f32>{
-                    return textureSample(img,samp,in.uv);
+                    return textureSample(image, sample, in.uv);
                 }
             `,
         });
@@ -83,12 +90,9 @@ export class PresentPass {
     }
 
     public render(texture: GPUTexture) {
-        const sampler = this.device.createSampler({
-            magFilter: "nearest",
-            minFilter: "nearest",
-        });
+        this.currentTexture = texture;
 
-        const bindGroup = this.device.createBindGroup({
+        this.bindGroup = this.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [
                 {
@@ -97,7 +101,7 @@ export class PresentPass {
                 },
                 {
                     binding: 1,
-                    resource: sampler,
+                    resource: this.sampler,
                 },
             ],
         });
@@ -114,7 +118,7 @@ export class PresentPass {
         });
 
         pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0, bindGroup);
+        pass.setBindGroup(0, this.bindGroup);
         pass.draw(6);
         pass.end();
 
