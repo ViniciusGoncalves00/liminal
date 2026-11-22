@@ -54,7 +54,13 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     );
 }
 
-fn castRay(pixel: vec2<f32>, textureSize: vec2<f32>, maxBounces: u32, seed: ptr<function, u32>) -> Ray {
+fn castRay(
+    pixel: vec2<f32>,
+    textureSize: vec2<f32>,
+    maxBounces: u32,
+    seed: ptr<function, u32>
+) -> Ray {
+
     let scale = camera.params.x;
     let aspect = camera.params.y;
 
@@ -65,122 +71,125 @@ fn castRay(pixel: vec2<f32>, textureSize: vec2<f32>, maxBounces: u32, seed: ptr<
     uv *= scale;
 
     var origin = camera.position.xyz;
+
     var direction = normalize(
         camera.forward.xyz +
         uv.x * camera.right.xyz +
         uv.y * camera.up.xyz
     );
-    
-    var ray: Ray = Ray(
-        origin,
-        direction,
-        vec3<f32>(0.0)
-    );
-        
-    var casts_to_contribute = 0u;
-    var contribution = 1.0;
-    var foundLight = false;
 
-    for (var cast_index = 0u; cast_index < maxBounces; cast_index++) {
-        let intersectionResults = intersectTriangles(origin, direction);
+    var radiance = vec3<f32>(0.0);
+    var throughput = vec3<f32>(1.0);
+
+    for (var bounce = 0u; bounce < maxBounces; bounce++) {
+
+        let triangleHit = intersectTriangles(origin, direction);
         let sphereHit = intersectSpheres(origin, direction);
 
-        let hasTriangle = intersectionResults.count > 0u;
+        let hasTriangle = triangleHit.count > 0u;
         let hasSphere = sphereHit.hit;
 
+        // Nenhuma interseção: contribuição do ambiente.
         if (!hasTriangle && !hasSphere) {
-            let skyColor = skyColor(direction);
-            contribution = 1.0;
-            ray.color += skyColor * contribution;
-            foundLight = true;
+            radiance += throughput * skyColor(direction);
             break;
         }
 
         var material: Material;
         var normal: vec3<f32>;
+        var hitPosition: vec3<f32>;
         var distance: f32;
-        var intersectionPoint: vec3<f32>;
 
         let triangleDistance = select(
             1e30,
-            intersectionResults.intersections[0].distance,
+            triangleHit.intersections[0].distance,
             hasTriangle
         );
 
         if (hasSphere && sphereHit.distance < triangleDistance) {
+
             material = materials[sphereHit.materialId];
             normal = sphereHit.normal;
+            hitPosition = sphereHit.position;
             distance = sphereHit.distance;
-            intersectionPoint = sphereHit.position;
+
         } else {
-            let intersectionResult = intersectionResults.intersections[0];
-            let triangle = triangles[intersectionResult.triangleIndex];
+
+            let hit = triangleHit.intersections[0];
+            let triangle = triangles[hit.triangleIndex];
 
             material = materials[triangle.materialId];
             normal = triangle.normal;
-            distance = intersectionResult.distance;
-            intersectionPoint = origin + direction * distance;
+            distance = hit.distance;
+            hitPosition = origin + direction * distance;
         }
 
-        let lightSourceIntensity = material.properties[2];
-        var refractionIndex = material.properties[3];
-        let hittedLightSource = lightSourceIntensity > 0.0;
-
-        if (hittedLightSource) {
-            ray.color += material.baseColor.rgb * lightSourceIntensity;
-            foundLight = true;
-            break;
-        } else {
-            ray.color += material.baseColor.rgb * contribution;
-        }
-
+        // Normal orientada para o lado de onde veio o raio.
         let frontFace = dot(direction, normal) < 0.0;
-        var usedNormal: vec3<f32>;
-        if (frontFace) {
-            usedNormal = normal;
-        } else {
-            usedNormal = -normal;
-        };
+        let usedNormal = select(-normal, normal, frontFace);
 
-        let materialRoughness = material.properties[0];
-            
-        if (materialRoughness > 0.0 || refractionIndex > 1.0) {
-            contribution *= (1 - dot(normal, -direction)) * (1 - materialRoughness);
-            casts_to_contribute++;
+        // Emissão do material.
+        let emission = material.baseColor.rgb * material.properties[2];
+        radiance += throughput * emission;
+
+        // Material emissivo: encerra o caminho nesta versão.
+        if (material.properties[2] > 0.0) {
+            break;
         }
 
-        let originOffset = usedNormal * 0.01;
+        // Atualiza a origem para evitar auto-interseção.
+        origin = hitPosition + usedNormal * 0.001;
+
+        // Espalhamento do material.
+        let roughness = material.properties[0];
+        let refractionIndex = material.properties[3];
 
         if (refractionIndex > 1.0) {
-            if (frontFace){
-                refractionIndex = 1.0 / refractionIndex;
+
+            var eta = refractionIndex;
+
+            if (frontFace) {
+                eta = 1.0 / eta;
             }
 
-            let cos_theta = min(dot(-direction, usedNormal), 1.0);
-            let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+            let cosTheta = min(
+                dot(-direction, usedNormal),
+                1.0
+            );
 
-            let cannotRefract = refractionIndex * sin_theta > 1.0;
-            let shouldReflect = cannotRefract || reflectance(cos_theta, refractionIndex) > random(seed);
+            let sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+            let cannotRefract = eta * sinTheta > 1.0;
+
+            let shouldReflect =
+                cannotRefract ||
+                reflectance(cosTheta, eta) > random(seed);
 
             if (shouldReflect) {
                 direction = reflect(direction, usedNormal);
-                origin = intersectionPoint + originOffset;
             } else {
-                direction = refract(direction, usedNormal, refractionIndex);
-                origin = intersectionPoint - originOffset;
+                direction = normalize(
+                    refract(direction, usedNormal, eta)
+                );
             }
+
+            // Dielétrico ideal: sem absorção.
         } else {
-            direction = reflectLambertian(direction, usedNormal, materialRoughness, seed);
-            origin = intersectionPoint + originOffset;
+
+            direction = reflectLambertian(
+                direction,
+                usedNormal,
+                roughness,
+                seed
+            );
+
+            // Atenuação pela refletância do material.
+            throughput *= material.baseColor.rgb;
         }
+
     }
 
-    if (!foundLight) {
-        ray.color = vec3<f32>(0.0);
-    }
-
-    ray.color /= f32(casts_to_contribute + 1u);
-    return ray;
+    return Ray(origin, direction, radiance);
 }
 
 fn reflectLambertian(direction: vec3<f32>, normal: vec3<f32>, roughness: f32, seed: ptr<function, u32>) -> vec3<f32> {
@@ -189,6 +198,13 @@ fn reflectLambertian(direction: vec3<f32>, normal: vec3<f32>, roughness: f32, se
     let reflectedDirection = reflect(direction, normal);
 
     return normalize(mix(reflectedDirection, randomLambertianDirection, roughness));
+}
+
+fn randomLambertian(
+    normal: vec3<f32>,
+    seed: ptr<function, u32>
+) -> vec3<f32> {
+    return normalize(normal + randomUnitVector(seed));
 }
 
 fn refract(direction: vec3<f32>, normal: vec3<f32>, refractionIndex: f32) -> vec3<f32> {
