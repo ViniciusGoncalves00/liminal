@@ -4,7 +4,6 @@ export class PresentPass {
     private readonly pipeline: GPURenderPipeline;
     private readonly sampler: GPUSampler;
     private bindGroup?: GPUBindGroup;
-    private currentTexture?: GPUTexture;
 
     public constructor(device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat) {
         this.device = device;
@@ -90,8 +89,6 @@ export class PresentPass {
     }
 
     public render(texture: GPUTexture) {
-        this.currentTexture = texture;
-
         this.bindGroup = this.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [
