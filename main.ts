@@ -74,11 +74,11 @@ Main.initUI();
 
 createRoom();
 // createReflectiveSphere();
-createRefractiveSphere();
+// createRefractiveSphere();
 // createMirror();
 // createAOCubes();
 // createReflectingObjects();
-// createManyCubes();
+createManyCubes();
 // createManyLights();
 
 let lastTime = 0;
@@ -358,12 +358,12 @@ function createMirror() {
 }
 
 function createManyCubes() {
-    for (let x = -4; x < 4; x++) {
-        for (let y = -4; y < 4; y++) {
-            for (let z = -4; z < 4; z++) {
+    for (let x = -3; x < 3; x++) {
+        for (let y = -3; y < 3; y++) {
+            for (let z = -3; z < 3; z++) {
                 const odd = (x + y + z) % 2 !== 0 ? 1.0 : 0.0;
                 const cube = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.25, 0.25, 0.25),
+                    new THREE.SphereGeometry(0.2),
                     new THREE.MeshPhysicalMaterial({
                         color: 0xeeeeee,
                         roughness: 0.8,
