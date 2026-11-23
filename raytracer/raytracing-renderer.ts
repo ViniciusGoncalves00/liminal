@@ -26,8 +26,8 @@ export class RayTracingRenderer {
     }
 
     public render(deltaTime: number, gpuScene: GPUScene, gpuCamera: GPUCamera) {
-        window.addEventListener("cameraHasMoved", () => this.accumulationPass.reset());
-        
+        window.addEventListener("resetAccumulation", () => this.accumulationPass.reset());
+
         this.rayTracingPass.render(gpuCamera, gpuScene);
         // this.postProcessPass.render(this.rayTracingPass.outputTexture);
         

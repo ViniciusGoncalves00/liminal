@@ -16,7 +16,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     }
 
     let TEXTURE_SIZE = vec2<f32>(f32(textureSize.x), f32(textureSize.y));
-    const TARGET_SAMPLES_PER_PIXEL = 16u;
+    const TARGET_SAMPLES_PER_PIXEL = 25u;
     const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(TARGET_SAMPLES_PER_PIXEL)));
     const AFFECTIVE_SAMPLES_PER_PIXEL = SQUAREROOT_SAMPLES_PER_PIXEL * SQUAREROOT_SAMPLES_PER_PIXEL;
     const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL = 1.0 / f32(SQUAREROOT_SAMPLES_PER_PIXEL);

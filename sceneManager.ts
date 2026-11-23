@@ -226,7 +226,7 @@ export class SceneManager {
         const rotationChanged = !this.gameCamera.quaternion.equals(this.previousQuaternion);
         
         if (positionChanged || rotationChanged) {
-            const event = new Event("cameraHasMoved");
+            const event = new Event("resetAccumulation");
             window.dispatchEvent(event);
         }
 

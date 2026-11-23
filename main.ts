@@ -403,6 +403,7 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
     };
 
     const skyFolder = gui.addFolder("Sky");
+    const resetAccumulationEvent = new Event("resetAccumulation");
 
     skyFolder
         .addColor(params, "zenithColor")
@@ -410,6 +411,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .onChange((value: string) => {
             const color = new THREE.Color(value);
             sceneManager.setZenithColor(color.r, color.g, color.b);
+
+            window.dispatchEvent(resetAccumulationEvent);
         });
 
     skyFolder
@@ -418,6 +421,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .onChange((value: string) => {
             const color = new THREE.Color(value);
             sceneManager.setHorizonColor(color.r, color.g, color.b);
+
+            window.dispatchEvent(resetAccumulationEvent);
         });
 
     skyFolder
@@ -426,6 +431,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .onChange((value: string) => {
             const color = new THREE.Color(value);
             sceneManager.setFogColor(color.r, color.g, color.b);
+
+            window.dispatchEvent(resetAccumulationEvent);
         });
 
     skyFolder
@@ -433,6 +440,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .name("Fog Spreadness")
         .onChange((value: number) => {
             sceneManager.setfogSpreadness(value);
+
+            window.dispatchEvent(resetAccumulationEvent);
         });
 
     const sunFolder = gui.addFolder("Sun");
@@ -444,6 +453,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         const direction = new THREE.Vector3(Math.cos(elevation) * Math.sin(azimuth), Math.sin(elevation), Math.cos(elevation) * Math.cos(azimuth)).normalize();
 
         sceneManager.setSunDirection(...direction.toArray());
+
+        window.dispatchEvent(resetAccumulationEvent);
     };
 
     sunFolder.add(params, "elevation", -90, 90, 1).name("Elevation").onChange(updateDirection);
@@ -455,6 +466,8 @@ export function createSkyGUI(sceneManager: SceneManager): GUI {
         .name("Intensity")
         .onChange((value: number) => {
             sceneManager.setSunIntensity(value);
+
+            window.dispatchEvent(resetAccumulationEvent);
         });
 
     return gui;
