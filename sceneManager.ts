@@ -181,7 +181,7 @@ export class SceneManager {
     }
 
     private createGameCamera(): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(45, this.gameCanvas.clientWidth / this.gameCanvas.clientHeight, 0.1, 10000);
+        const camera = new THREE.PerspectiveCamera(60, this.gameCanvas.clientWidth / this.gameCanvas.clientHeight, 0.1, 10000);
 
         camera.position.set(0, 0, 5);
         camera.lookAt(0, 0, 0);

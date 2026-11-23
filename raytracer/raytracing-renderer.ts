@@ -32,8 +32,8 @@ export class RayTracingRenderer {
         // this.postProcessPass.render(this.rayTracingPass.outputTexture);
         
         this.accumulationPass.render(this.rayTracingPass.outputTexture);
-        this.presentPass.render(this.accumulationPass.outputTexture);
         
+        this.presentPass.render(this.accumulationPass.outputTexture);
         this.exposurePass.render(this.accumulationPass.outputTexture, deltaTime);
     }
 

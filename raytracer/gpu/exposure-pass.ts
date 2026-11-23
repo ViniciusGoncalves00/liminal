@@ -227,11 +227,9 @@ export class ExposurePass {
 
                     loop {
                         if (localIndex < stride) {
-                            sums[localIndex] +=
-                                sums[localIndex + stride];
+                            sums[localIndex] += sums[localIndex + stride];
 
-                            counts[localIndex] +=
-                                counts[localIndex + stride];
+                            counts[localIndex] += counts[localIndex + stride];
                         }
 
                         workgroupBarrier();
@@ -245,11 +243,8 @@ export class ExposurePass {
 
                     // Calculate target exposure.
                     if (localIndex == 0u) {
-                        let averageLogLuminance =
-                            sums[0] / f32(max(counts[0], 1u));
-
-                        let averageLuminance =
-                            exp(averageLogLuminance);
+                        let averageLogLuminance = sums[0] / f32(max(counts[0], 1u));
+                        let averageLuminance = exp(averageLogLuminance);
 
                         let targetExposure = clamp(
                             params.keyValue /

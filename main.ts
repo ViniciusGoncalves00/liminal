@@ -5,6 +5,7 @@ import { SceneLayer, SceneManager } from "./sceneManager";
 import type { GPUAmbient } from "./raytracer/gpu/gpu-ambient";
 import type { Ambient } from "./raytracer/ambient";
 import { degToRad } from "three/src/math/MathUtils.js";
+import { STLLoader } from "three/examples/jsm/Addons.js";
 
 const averageFpsCounter = document.getElementById("average fps") as HTMLDivElement;
 const instantaneousFpsCounter = document.getElementById("instantaneous fps") as HTMLDivElement;
@@ -78,8 +79,35 @@ createRoom();
 // createMirror();
 // createAOCubes();
 // createReflectingObjects();
-createManyCubes();
+// createManyCubes();
 // createManyLights();
+
+const loader = new STLLoader();
+const buildingGeometry = await loader.loadAsync( 'models/stl/building.stl' );
+const buildingMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xf0f0f0,
+        roughness: 0.9,
+        metalness: 0.0,
+        emissiveIntensity: 0.0,
+        ior: 0.0,
+    });
+const building = new THREE.Mesh( buildingGeometry, buildingMaterial );
+building.rotateX(degToRad(-90));
+building.position.setY(-2.6);
+Main.sceneManager.addObject( building );
+
+const neighborhoodGeometry = await loader.loadAsync( 'models/stl/neighborhood.stl' );
+const neighborhoodMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xf0f0f0,
+        roughness: 0.9,
+        metalness: 0.0,
+        emissiveIntensity: 0.0,
+        ior: 0.0,
+    });
+const neighborhood = new THREE.Mesh( neighborhoodGeometry, neighborhoodMaterial );
+neighborhood.rotateX(degToRad(-90));
+neighborhood.position.setY(-2.6);
+Main.sceneManager.addObject( neighborhood );
 
 let lastTime = 0;
 let fpsHistoric: number[] = [];
@@ -112,7 +140,7 @@ const loop = (time: number) => {
 loop(0);
 
 function createRoom() {
-    const groundGeometry = new THREE.CircleGeometry(1000);
+    const groundGeometry = new THREE.CircleGeometry(1000, 4);
     const ground = new THREE.Mesh(
         groundGeometry,
         new THREE.MeshPhysicalMaterial({
@@ -127,92 +155,92 @@ function createRoom() {
     ground.rotateX(THREE.MathUtils.degToRad(-90));
     Main.sceneManager.addObject(ground, SceneLayer.Game, SceneLayer.Editor);
 
-    const baseGeometry = new THREE.BoxGeometry(5, 0.1, 5);
-    const floor = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshPhysicalMaterial({
-            color: 0xf0f0f0,
-            roughness: 1.0,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    floor.position.set(0, -2.5, 0);
+    // const baseGeometry = new THREE.BoxGeometry(5, 0.1, 5);
+    // const floor = new THREE.Mesh(
+    //     baseGeometry,
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0xf0f0f0,
+    //         roughness: 1.0,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // floor.position.set(0, -2.5, 0);
 
-    Main.sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
+    // Main.sceneManager.addObject(floor, SceneLayer.Game, SceneLayer.Editor);
 
-    const ceiling = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            roughness: 0.5,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    ceiling.position.set(0, 2.5, 0);
+    // const ceiling = new THREE.Mesh(
+    //     baseGeometry,
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0xffffff,
+    //         roughness: 0.5,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // ceiling.position.set(0, 2.5, 0);
 
-    Main.sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
+    // Main.sceneManager.addObject(ceiling, SceneLayer.Game, SceneLayer.Editor);
 
-    const right = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshPhysicalMaterial({
-            color: 0xff0000,
-            roughness: 0.2,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    right.position.set(2.5, 0, 0);
-    right.rotateZ(THREE.MathUtils.degToRad(90));
+    // const right = new THREE.Mesh(
+    //     baseGeometry,
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0xff0000,
+    //         roughness: 0.2,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // right.position.set(2.5, 0, 0);
+    // right.rotateZ(THREE.MathUtils.degToRad(90));
 
-    Main.sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
+    // Main.sceneManager.addObject(right, SceneLayer.Game, SceneLayer.Editor);
 
-    const left = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshPhysicalMaterial({
-            color: 0x00ff00,
-            roughness: 1.0,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    left.position.set(-2.5, 0, 0);
-    left.rotateZ(THREE.MathUtils.degToRad(90));
+    // const left = new THREE.Mesh(
+    //     baseGeometry,
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0x00ff00,
+    //         roughness: 1.0,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // left.position.set(-2.5, 0, 0);
+    // left.rotateZ(THREE.MathUtils.degToRad(90));
 
-    Main.sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
+    // Main.sceneManager.addObject(left, SceneLayer.Game, SceneLayer.Editor);
 
-    const back = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshPhysicalMaterial({
-            color: 0xf0f0f0,
-            roughness: 1.0,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    back.position.set(0, 0, -2.5);
-    back.rotateX(THREE.MathUtils.degToRad(90));
+    // const back = new THREE.Mesh(
+    //     baseGeometry,
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0xf0f0f0,
+    //         roughness: 1.0,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // back.position.set(0, 0, -2.5);
+    // back.rotateX(THREE.MathUtils.degToRad(90));
 
-    Main.sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
+    // Main.sceneManager.addObject(back, SceneLayer.Game, SceneLayer.Editor);
 
-    const front = new THREE.Mesh(
-        new THREE.BoxGeometry(5, 0.1, 5),
-        new THREE.MeshPhysicalMaterial({
-            color: 0xeeeeee,
-            roughness: 0.5,
-            metalness: 0.0,
-            emissiveIntensity: 0.0,
-            ior: 0.0,
-        }),
-    );
-    front.position.set(0, 0, 2.5);
-    front.rotateX(THREE.MathUtils.degToRad(90));
+    // const front = new THREE.Mesh(
+    //     new THREE.BoxGeometry(5, 0.1, 5),
+    //     new THREE.MeshPhysicalMaterial({
+    //         color: 0xeeeeee,
+    //         roughness: 0.5,
+    //         metalness: 0.0,
+    //         emissiveIntensity: 0.0,
+    //         ior: 0.0,
+    //     }),
+    // );
+    // front.position.set(0, 0, 2.5);
+    // front.rotateX(THREE.MathUtils.degToRad(90));
 
     // Main.sceneManager.addObject(front, SceneLayer.Game, SceneLayer.Editor);
 }
