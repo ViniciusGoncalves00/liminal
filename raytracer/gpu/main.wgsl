@@ -80,6 +80,7 @@ fn castRay(
 
     var radiance = vec3<f32>(0.0);
     var throughput = vec3<f32>(1.0);
+    var lastNormal = direction;
 
     for (var bounce = 0u; bounce < maxBounces; bounce++) {
 
@@ -91,7 +92,25 @@ fn castRay(
 
         // Nenhuma interseção: contribuição do ambiente.
         if (!hasTriangle && !hasSphere) {
-            radiance += throughput * skyColor(direction);
+            if (bounce == 0) {
+                radiance += throughput * skyColor(direction) * skyData.sunIntensity;
+                break;
+            }
+
+            let sunTriangleHit = intersectTriangles(origin, skyData.sunDirection);
+            let sunSphereHit = intersectSpheres(origin, skyData.sunDirection);
+
+            let sunHasTriangle = sunTriangleHit.count > 0u;
+            let sunHasSphere = sunSphereHit.hit;
+
+            let inShadow = sunHasTriangle || sunHasSphere;
+
+            if (inShadow) {
+                radiance += throughput * skyColor(direction) * skyData.sunIntensity;
+            } else {
+                radiance += (vec3<f32>(1.0) * skyData.sunIntensity);
+            }
+
             break;
         }
 
@@ -290,6 +309,7 @@ fn skyColor(rayDirection: vec3<f32>) -> vec3<f32> {
     skyColor = mix(skyColor, sunColor, sunDot);
     let sunIntensity = skyData.sunDirection.y;
     skyColor *= (sunIntensity + 1.0) / 2.0;
+    // skyColor *= sunIntensity;
 
     return skyColor;
 }

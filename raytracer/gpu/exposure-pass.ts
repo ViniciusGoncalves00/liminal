@@ -448,7 +448,7 @@ export class ExposurePass {
         floats[0] = deltaTime;
         floats[1] = 3.0; // Speed to adapt to brighter scenes.
         floats[2] = 1.5; // Speed to adapt to darker scenes.
-        floats[3] = 1.0; // Minimum exposure.
+        floats[3] = 0.5; // Minimum exposure.
         floats[4] = 5.0; // Maximum exposure.
         floats[5] = 0.18; // Middle gray.
 
