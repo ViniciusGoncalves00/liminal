@@ -1,4 +1,3 @@
-
 import { GPUCamera } from "../gpu/gpu-camera";
 import { GPUScene } from "../gpu/gpu-scene";
 import { GPUTriangle } from "../gpu/gpu-triangle";
@@ -10,10 +9,12 @@ import { BVHNode } from "../gpu/BVHNode";
 import collisionShader from "../shader/collision.wgsl?raw";
 import normalShader from "../shader/normal.wgsl?raw";
 
-export class NormalPass {
+export class NormalAndDepthPass {
+    public readonly normalTexture: GPUTexture;
+    public readonly normalTextureView: GPUTextureView;
 
-    public readonly outputTexture: GPUTexture;
-    public readonly outputTextureView: GPUTextureView;
+    public readonly depthTexture: GPUTexture;
+    public readonly depthTextureView: GPUTextureView;
 
     private readonly device: GPUDevice;
     private readonly pipeline: GPUComputePipeline;
@@ -27,16 +28,15 @@ export class NormalPass {
         width: number,
         height: number
     ) {
-
         this.device = device;
         this.width = width;
         this.height = height;
 
         // ============================================================
-        // Output texture
+        // Normal texture
         // ============================================================
 
-        this.outputTexture = device.createTexture({
+        this.normalTexture = device.createTexture({
             size: [width, height],
             format: "rgba16float",
             usage:
@@ -45,7 +45,22 @@ export class NormalPass {
                 GPUTextureUsage.COPY_SRC,
         });
 
-        this.outputTextureView = this.outputTexture.createView();
+        this.normalTextureView = this.normalTexture.createView();
+
+        // ============================================================
+        // Depth texture
+        // ============================================================
+
+        this.depthTexture = device.createTexture({
+            size: [width, height],
+            format: "r32float",
+            usage:
+                GPUTextureUsage.STORAGE_BINDING |
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_SRC,
+        });
+
+        this.depthTextureView = this.depthTexture.createView();
 
         // ============================================================
         // Shader
@@ -103,6 +118,15 @@ export class NormalPass {
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "read-only-storage" },
                 },
+                {
+                    binding: 5,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "r32float",
+                        viewDimension: "2d",
+                    },
+                },
             ],
         });
 
@@ -131,7 +155,6 @@ export class NormalPass {
         gpuCamera: GPUCamera,
         gpuScene: GPUScene
     ): void {
-
         const bindGroup = this.device.createBindGroup({
             layout: this.bindGroupLayout,
             entries: [
@@ -149,7 +172,7 @@ export class NormalPass {
                 },
                 {
                     binding: 2,
-                    resource: this.outputTextureView,
+                    resource: this.normalTextureView,
                 },
                 {
                     binding: 3,
@@ -162,6 +185,10 @@ export class NormalPass {
                     resource: {
                         buffer: gpuScene.sphereBuffer,
                     },
+                },
+                {
+                    binding: 5,
+                    resource: this.depthTextureView,
                 },
             ],
         });
@@ -186,6 +213,7 @@ export class NormalPass {
     }
 
     public dispose(): void {
-        this.outputTexture.destroy();
+        this.normalTexture.destroy();
+        this.depthTexture.destroy();
     }
 }

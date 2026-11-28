@@ -16,7 +16,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     }
 
     let TEXTURE_SIZE = vec2<f32>(f32(textureSize.x), f32(textureSize.y));
-    const TARGET_SAMPLES_PER_PIXEL = 9u;
+    const TARGET_SAMPLES_PER_PIXEL = 16u;
     const SQUAREROOT_SAMPLES_PER_PIXEL = u32(sqrt(f32(TARGET_SAMPLES_PER_PIXEL)));
     const AFFECTIVE_SAMPLES_PER_PIXEL = SQUAREROOT_SAMPLES_PER_PIXEL * SQUAREROOT_SAMPLES_PER_PIXEL;
     const RECIP_SQUAREROOT_SAMPLES_PER_PIXEL = 1.0 / f32(SQUAREROOT_SAMPLES_PER_PIXEL);
@@ -27,7 +27,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     for (var s_i = 0u; s_i < SQUAREROOT_SAMPLES_PER_PIXEL; s_i++) {
         for (var s_j = 0u; s_j < SQUAREROOT_SAMPLES_PER_PIXEL; s_j++) {
             let sample = s_i * SQUAREROOT_SAMPLES_PER_PIXEL + s_j;
-            var seed = (id.x + id.y * textureSize.x + sample * 1973u) * u32(time.value * 1000.0);
+            var seed = (id.x + id.y * textureSize.x + sample * 10007u) * u32(time.value * 99787.0);
             var stratifiedPixel = sampleStratifiedSquare(s_i, s_j, RECIP_SQUAREROOT_SAMPLES_PER_PIXEL, &seed);
 
             // if (sample == 0u) {

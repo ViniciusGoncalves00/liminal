@@ -7,7 +7,7 @@ export class PostProcessPass {
     private readonly pipeline: GPUComputePipeline;
     private readonly bindGroupLayout: GPUBindGroupLayout;
 
-    private readonly thresholdBuffer: GPUBuffer;
+    private readonly settingsBuffer: GPUBuffer;
 
     private readonly width: number;
     private readonly height: number;
@@ -36,11 +36,11 @@ export class PostProcessPass {
         this.outputTextureView = this.outputTexture.createView();
 
         // ============================================================
-        // Threshold buffer
+        // Settings buffer
         // ============================================================
 
-        this.thresholdBuffer = device.createBuffer({
-            size: 4,
+        this.settingsBuffer = device.createBuffer({
+            size: 16,
             usage:
                 GPUBufferUsage.UNIFORM |
                 GPUBufferUsage.COPY_DST,
@@ -53,7 +53,9 @@ export class PostProcessPass {
         const module = device.createShaderModule({
             code: `
                 struct FilterSettings {
-                    threshold: f32,
+                    normalThreshold: f32,
+                    depthThreshold: f32,
+                    padding: vec2<f32>,
                 };
 
                 @group(0) @binding(0)
@@ -63,10 +65,45 @@ export class PostProcessPass {
                 var normalTexture: texture_2d<f32>;
 
                 @group(0) @binding(2)
-                var outputTexture: texture_storage_2d<rgba16float, write>;
+                var depthTexture: texture_2d<f32>;
 
                 @group(0) @binding(3)
+                var outputTexture: texture_storage_2d<rgba16float, write>;
+
+                @group(0) @binding(4)
                 var<uniform> settings: FilterSettings;
+
+                // ====================================================
+                // Neighbor validation
+                // ====================================================
+
+                fn isValidNeighbor(
+                    centerNormal: vec3<f32>,
+                    neighborNormal: vec3<f32>,
+                    centerDepth: f32,
+                    neighborDepth: f32
+                ) -> bool {
+
+                    let normalDifference = 1.0 - dot(
+                        centerNormal,
+                        neighborNormal
+                    );
+
+                    let depthDifference =
+                        abs(centerDepth - neighborDepth) /
+                        max(
+                            max(abs(centerDepth), abs(neighborDepth)),
+                            0.0001
+                        );
+
+                    return
+                        normalDifference <= settings.normalThreshold &&
+                        depthDifference <= settings.depthThreshold;
+                }
+
+                // ====================================================
+                // Main
+                // ====================================================
 
                 @compute @workgroup_size(8, 8)
                 fn main(
@@ -95,7 +132,7 @@ export class PostProcessPass {
                         0
                     );
 
-                    // Céu: mantém a cor original.
+                    // Sky: preserve original color.
                     if (centerNormalData.a == 0.0) {
                         textureStore(
                             outputTexture,
@@ -106,10 +143,22 @@ export class PostProcessPass {
                         return;
                     }
 
-                    let centerNormal = normalize(centerNormalData.rgb);
+                    let centerNormal = normalize(
+                        centerNormalData.rgb
+                    );
 
-                    var colorSum = vec4<f32>(0.0);
+                    let centerDepth = textureLoad(
+                        depthTexture,
+                        pixel,
+                        0
+                    ).r;
+
+                    var colorSum = vec3<f32>(0.0);
                     var sampleCount = 0.0;
+
+                    // =================================================
+                    // 3x3 neighborhood
+                    // =================================================
 
                     for (var x = -1i; x <= 1i; x++) {
                         for (var y = -1i; y <= 1i; y++) {
@@ -119,7 +168,7 @@ export class PostProcessPass {
                             let p = clamp(
                                 neighborPixel,
                                 vec2<i32>(0),
-                                vec2<i32>(textureSize) - 1
+                                vec2<i32>(textureSize) - vec2<i32>(1)
                             );
 
                             let neighborNormalData = textureLoad(
@@ -128,7 +177,7 @@ export class PostProcessPass {
                                 0
                             );
 
-                            // Ignora pixels do céu.
+                            // Ignore sky pixels.
                             if (neighborNormalData.a == 0.0) {
                                 continue;
                             }
@@ -137,21 +186,28 @@ export class PostProcessPass {
                                 neighborNormalData.rgb
                             );
 
-                            let normalDifference = 1.0 - dot(
-                                centerNormal,
-                                neighborNormal
-                            );
+                            let neighborDepth = textureLoad(
+                                depthTexture,
+                                p,
+                                0
+                            ).r;
 
-                            if (normalDifference > settings.threshold) {
+                            if (!isValidNeighbor(
+                                centerNormal,
+                                neighborNormal,
+                                centerDepth,
+                                neighborDepth
+                            )) {
                                 continue;
                             }
 
-                            colorSum += textureLoad(
+                            let neighborColor = textureLoad(
                                 inputTexture,
                                 p,
                                 0
                             );
 
+                            colorSum += neighborColor.rgb;
                             sampleCount += 1.0;
                         }
                     }
@@ -161,7 +217,7 @@ export class PostProcessPass {
                     textureStore(
                         outputTexture,
                         pixel,
-                        result
+                        vec4<f32>(result, centerColor.a)
                     );
                 }
             `,
@@ -192,6 +248,14 @@ export class PostProcessPass {
                 {
                     binding: 2,
                     visibility: GPUShaderStage.COMPUTE,
+                    texture: {
+                        sampleType: "unfilterable-float",
+                        viewDimension: "2d",
+                    },
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.COMPUTE,
                     storageTexture: {
                         access: "write-only",
                         format: "rgba16float",
@@ -199,7 +263,7 @@ export class PostProcessPass {
                     },
                 },
                 {
-                    binding: 3,
+                    binding: 4,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: {
                         type: "uniform",
@@ -220,18 +284,28 @@ export class PostProcessPass {
             },
         });
 
-        this.setThreshold(0.05);
+        this.setThresholds(0.02, 0.1);
     }
 
     // ================================================================
-    // Threshold
+    // Thresholds
     // ================================================================
 
-    public setThreshold(value: number): void {
-        this.device.queue.writeBuffer(
-            this.thresholdBuffer,
+    public setThresholds(
+        normalThreshold: number,
+        depthThreshold: number
+    ): void {
+        const data = new Float32Array([
+            normalThreshold,
+            depthThreshold,
             0,
-            new Float32Array([value])
+            0,
+        ]);
+
+        this.device.queue.writeBuffer(
+            this.settingsBuffer,
+            0,
+            data
         );
     }
 
@@ -241,7 +315,8 @@ export class PostProcessPass {
 
     public render(
         inputTexture: GPUTexture,
-        normalTexture: GPUTexture
+        normalTexture: GPUTexture,
+        depthTexture: GPUTexture
     ): void {
 
         const bindGroup = this.device.createBindGroup({
@@ -257,12 +332,16 @@ export class PostProcessPass {
                 },
                 {
                     binding: 2,
-                    resource: this.outputTextureView,
+                    resource: depthTexture.createView(),
                 },
                 {
                     binding: 3,
+                    resource: this.outputTextureView,
+                },
+                {
+                    binding: 4,
                     resource: {
-                        buffer: this.thresholdBuffer,
+                        buffer: this.settingsBuffer,
                     },
                 },
             ],
@@ -289,6 +368,6 @@ export class PostProcessPass {
 
     public dispose(): void {
         this.outputTexture.destroy();
-        this.thresholdBuffer.destroy();
+        this.settingsBuffer.destroy();
     }
 }
