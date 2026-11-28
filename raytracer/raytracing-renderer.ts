@@ -1,10 +1,10 @@
 import { GPUCamera } from "./gpu/gpu-camera";
 import { GPUScene } from "./gpu/gpu-scene";
-import { AccumulationPass } from "./gpu/accumulation-pass";
-import { PresentPass } from "./gpu/present-pass";
-import { ExposurePass } from "./gpu/exposure-pass";
-import { RayTracingPass } from "./gpu/raytracing-pass";
-import { PostProcessPass } from "./gpu/post-process-pass";
+import { AccumulationPass } from "./pass/accumulation-pass";
+import { PresentPass } from "./pass/present-pass";
+import { ExposurePass } from "./pass/exposure-pass";
+import { RayTracingPass } from "./pass/raytracing-pass";
+import { PostProcessPass } from "./pass/post-process-pass";
 
 export class RayTracingRenderer {
     private readonly rayTracingPass: RayTracingPass;

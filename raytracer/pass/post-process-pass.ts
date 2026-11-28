@@ -1,5 +1,5 @@
-import colorConversorShader from "./color.wgsl?raw";
-import randomShader from "./random.wgsl?raw";
+import colorConversorShader from "../shader/color.wgsl?raw";
+import randomShader from "../shader/random.wgsl?raw";
 
 export class PostProcessPass {
     public readonly outputTexture: GPUTexture;

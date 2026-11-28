@@ -1,15 +1,15 @@
-import { GPUCamera } from "./gpu-camera";
-import { GPUScene } from "./gpu-scene";
-import { GPUTriangle } from "./gpu-triangle";
-import { GPUMaterial } from "./gpu-material";
-import { GPUAmbient } from "./gpu-ambient";
-import { GPUSphere } from "./gpu-sphere";
-import { BVHNode } from "./BVHNode";
+import { GPUCamera } from "../gpu/gpu-camera";
+import { GPUScene } from "../gpu/gpu-scene";
+import { GPUTriangle } from "../gpu/gpu-triangle";
+import { GPUMaterial } from "../gpu/gpu-material";
+import { GPUAmbient } from "../gpu/gpu-ambient";
+import { GPUSphere } from "../gpu/gpu-sphere";
+import { BVHNode } from "../gpu/BVHNode";
 
-import collisionShader from "./collision.wgsl?raw";
-import colorConversorShader from "./color.wgsl?raw";
-import randomShader from "./random.wgsl?raw";
-import mainShader from "./main.wgsl?raw";
+import collisionShader from "../shader/collision.wgsl?raw";
+import colorConversorShader from "../shader/color.wgsl?raw";
+import randomShader from "../shader/random.wgsl?raw";
+import mainShader from "../shader/main.wgsl?raw";
 
 export class RayTracingPass {
     public readonly outputTexture: GPUTexture;
