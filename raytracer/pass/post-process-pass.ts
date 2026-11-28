@@ -284,7 +284,7 @@ export class PostProcessPass {
             },
         });
 
-        this.setThresholds(0.02, 0.1);
+        this.setThresholds(0.02, 1.0);
     }
 
     // ================================================================

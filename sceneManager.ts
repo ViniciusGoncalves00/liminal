@@ -5,6 +5,7 @@ import { RayTracingRenderer } from "./raytracer/raytracing-renderer";
 import { GPUScene } from "./raytracer/gpu/gpu-scene";
 import { GPUCamera } from "./raytracer/gpu/gpu-camera";
 import { Ambient } from "./raytracer/ambient";
+import { radToDeg } from "three/src/math/MathUtils.js";
 
 export const SceneLayer = {
     Game: 0,
@@ -222,8 +223,11 @@ export class SceneManager {
     }
 
     private hasCameraMoved(): void {
-        const positionChanged = !this.gameCamera.position.equals(this.previousPosition);
-        const rotationChanged = !this.gameCamera.quaternion.equals(this.previousQuaternion);
+        let positionChanged = !this.gameCamera.position.equals(this.previousPosition);
+        let rotationChanged = !this.gameCamera.quaternion.equals(this.previousQuaternion);
+
+        positionChanged = this.gameCamera.position.distanceTo(this.previousPosition) > 0.1;
+        rotationChanged = radToDeg(this.gameCamera.quaternion.angleTo(this.previousQuaternion)) > 0.1;
         
         if (positionChanged || rotationChanged) {
             const event = new Event("resetAccumulation");
