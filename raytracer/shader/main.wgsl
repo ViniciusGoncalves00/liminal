@@ -83,6 +83,10 @@ fn castRay(
     var lastNormal = direction;
 
     for (var bounce = 0u; bounce < maxBounces; bounce++) {
+        var material: Material;
+        var normal: vec3<f32>;
+        var hitPosition: vec3<f32>;
+        var distance: f32;
 
         let triangleHit = intersectTriangles(origin, direction);
         let sphereHit = intersectSpheres(origin, direction);
@@ -105,19 +109,37 @@ fn castRay(
 
             let inShadow = sunHasTriangle || sunHasSphere;
 
-            if (inShadow) {
-                radiance += throughput * skyColor(direction) * skyData.sunIntensity;
+            let triangleDistance = select(
+                1e30,
+                triangleHit.intersections[0].distance,
+                hasTriangle
+            );
+
+            if (hasSphere && sphereHit.distance < triangleDistance) {
+                material = materials[sphereHit.materialId];
+                normal = sphereHit.normal;
+                hitPosition = sphereHit.position;
+                distance = sphereHit.distance;
             } else {
-                radiance += (vec3<f32>(1.0) * skyData.sunIntensity);
+                let hit = triangleHit.intersections[0];
+                let triangle = triangles[hit.triangleIndex];
+
+                material = materials[triangle.materialId];
+                normal = triangle.normal;
+                distance = hit.distance;
+                hitPosition = origin + direction * distance;
+            }
+
+            let dot = dot(normal, skyData.sunDirection);
+
+            if (inShadow) {
+                radiance += throughput * skyColor(direction) * skyData.sunIntensity * dot;
+            } else {
+                radiance += (vec3<f32>(1.0) * skyData.sunIntensity) * dot;
             }
 
             break;
         }
-
-        var material: Material;
-        var normal: vec3<f32>;
-        var hitPosition: vec3<f32>;
-        var distance: f32;
 
         let triangleDistance = select(
             1e30,
